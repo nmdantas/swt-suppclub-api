@@ -1,0 +1,27 @@
+{
+  "name": "swt-suppclub-api",
+  "version": "0.0.0",
+  "description": "The newest SWT application",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nmdantas/swt-suppclub-api.git"
+  },
+  "author": "Nicholas M. Dantas",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/nmdantas/swt-suppclub-api/issues"
+  },
+  "homepage": "https://github.com/nmdantas/swt-suppclub-api#readme",
+  "dependencies": {
+    "body-parser": "^1.17.1",
+    "compression": "^1.6.2",
+    "express": "^4.15.2",
+    "mysql": "^2.13.0",
+    "sequelize": "^3.30.4",
+    "swt-framework": "^0.1.0"
+  }
+}
