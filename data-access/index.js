@@ -21,16 +21,57 @@ var sequelize = new Sequelize(process.env.DB_BASE, process.env.DB_USER, process.
     }
 });
 
-var BrandSchema = sequelize.define('brands', {
-    name: { type: Sequelize.STRING, allowNull: false }
-}, {
-    paranoid: true,
-    underscored: false,
-    freezeTableName: true
-});
+// Models
+var NutrientSchema = sequelize.import('./models/nutrient');
+var BrandSchema = sequelize.import('./models/brand');
+var StoreSchema = sequelize.import('./models/store');
+var PostSchema = sequelize.import('./models/post');
+var TagSchema = sequelize.import('./models/tag');
+var ObjectiveSchema = sequelize.import('./models/objective');
+var CategorySchema = sequelize.import('./models/category');
+var ProductSchema = sequelize.import('./models/product');
 
+// Associação Objetivo x Tag
+var ObjectivesTags = sequelize.define('ObjectivesTags', {}, { freezeTableName: true });
+
+ObjectiveSchema.belongsToMany(TagSchema, { through: ObjectivesTags })
+TagSchema.belongsToMany(ObjectiveSchema, { through: ObjectivesTags });
+
+// Associações de Produto
+var ProductsTags = sequelize.define('ProductsTags', {}, { freezeTableName: true });
+var ProductsNutrients = sequelize.define('ProductsNutrients', {
+    value: Sequelize.STRING,
+    portion: Sequelize.STRING
+}, { freezeTableName: true });
+
+ProductSchema.belongsTo(BrandSchema);
+ProductSchema.belongsTo(CategorySchema);
+ProductSchema.belongsToMany(TagSchema, { through: ProductsTags });
+ProductSchema.belongsToMany(NutrientSchema, { through: ProductsNutrients });
+
+TagSchema.belongsToMany(ProductSchema, { through: ProductsTags });
+NutrientSchema.belongsToMany(ProductSchema, { through: ProductsNutrients });
+
+// Associações de Lojas x Produtos
+var StoresProducts = sequelize.define('StoresProducts', {
+    reference: Sequelize.STRING,
+    stock: Sequelize.INTEGER,
+    price: Sequelize.DECIMAL(10, 2)
+}, { freezeTableName: true });
+
+StoreSchema.belongsToMany(ProductSchema, { through: StoresProducts });
+ProductSchema.belongsToMany(StoreSchema, { through: StoresProducts });
+
+// Cria/Atualiza o banco de dados de acordo com os esquemas (Schema)
 sequelize.sync();
 
 module.exports = {
-    Brand: BrandSchema
+    Nutrient: NutrientSchema,
+    Brand: BrandSchema,
+    Store: StoreSchema,
+    Post: PostSchema,
+    Tag: TagSchema,
+    Objective: ObjectiveSchema,
+    Category: CategorySchema,
+    Product: ProductSchema
 };

@@ -11,29 +11,13 @@
 require('dotenv').config();
 
 var PORT = process.env.PORT || 1337;
+var API_PREFIX = '/api/v0';
 
 var express     = require('express');
 var bodyParser  = require('body-parser');
 var compression = require('compression');
 var framework   = require('swt-framework');
-var accessLayer = require('./data-access');
-
-// Apenas testando Sequelize
-accessLayer.Brand.insertOrUpdate({
-    name: 'Midway'
-}).then(function() {
-    accessLayer.Brand.insertOrUpdate({
-        name: 'Universal Nutrition'
-    }).then(function () {
-        accessLayer.Brand.findAll().then(function(results) {
-            for (var i = 0; i < results.length; i++) {
-                console.log(results[i].dataValues);
-            }
-        });
-    });
-}, function(error) {
-    console.log(error.message);
-});
+var controllers = require('./controllers');
 
 var app = express();
 
@@ -48,12 +32,16 @@ app.all('/', function(req, res) {
     });
 });
 
+// Habilita CORS
 app.use(framework.security.enablePreflight);
 // Verificacoes no Header Authorization
 app.use(framework.security.checkAuthorization);
 
 // Rotas
-//app.use('/api/v0/users', userManager.controllers.user);
+// Marcas
+app.use(API_PREFIX, controllers.brand);
+// Categorias
+app.use(API_PREFIX, controllers.category);
 
 // Middleware de erro
 app.use(framework.logger.middleware);
