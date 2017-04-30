@@ -23,6 +23,6 @@
     "mysql": "^2.13.0",
     "sequelize": "^3.30.4",
     "swt-framework": "^0.1.5",
-    "swt-user-manager": "^0.0.2"
+    "swt-user-manager": "^0.0.4"
   }
 }
