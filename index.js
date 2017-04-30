@@ -17,6 +17,7 @@ var express     = require('express');
 var bodyParser  = require('body-parser');
 var compression = require('compression');
 var framework   = require('swt-framework');
+var userManager = require('swt-user-manager');
 var controllers = require('./controllers');
 
 var app = express();
@@ -38,6 +39,8 @@ app.use(framework.security.enablePreflight);
 app.use(framework.security.checkAuthorization);
 
 // Rotas
+// Usuario
+app.use(API_PREFIX, userManager.controllers.user);
 // Marcas
 app.use(API_PREFIX, controllers.brand);
 // Categorias

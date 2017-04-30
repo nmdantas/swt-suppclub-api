@@ -22,6 +22,7 @@
     "express": "^4.15.2",
     "mysql": "^2.13.0",
     "sequelize": "^3.30.4",
-    "swt-framework": "^0.1.0"
+    "swt-framework": "^0.1.4",
+    "swt-user-manager": "0.0.2"
   }
 }
