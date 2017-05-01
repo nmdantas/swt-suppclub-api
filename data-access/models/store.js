@@ -18,7 +18,15 @@ module.exports = function(sequelize, DataType) {
             validate: { 
                 isEmail: true 
             } 
-        }
+        },
+        cnpj: { type: DataType.STRING, allowNull: false },
+        sponsor: { type: DataType.STRING, allowNull: false },
+        sponsorDocument: { type: DataType.STRING, allowNull: false },
+        website: { type: DataType.STRING, allowNull: true },
+        description: { type: DataType.STRING, allowNull: true },
+        status: { type: DataType.INTEGER, allowNull: false },
+        resume: { type: DataType.STRING, allowNull: true },
+        open: { type: DataType.BOOLEAN, allowNull: false },
     }, {
         paranoid: true,
         underscored: false
