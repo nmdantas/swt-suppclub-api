@@ -63,7 +63,9 @@ StoreSchema.belongsToMany(ProductSchema, { through: StoresProducts });
 ProductSchema.belongsToMany(StoreSchema, { through: StoresProducts });
 
 // Cria/Atualiza o banco de dados de acordo com os esquemas (Schema)
-sequelize.sync();
+sequelize.sync({
+    force: true
+});
 
 module.exports = {
     Nutrient: NutrientSchema,
