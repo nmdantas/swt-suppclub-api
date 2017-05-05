@@ -1,4 +1,4 @@
-'use strict';
+/*'use strict';
 
 // Inicia as variaveis de ambiente
 require('dotenv').config();
@@ -35,4 +35,4 @@ describe('GET /nutrients', function() {
             .set('Accept', 'application/json')
             .expect(200, done);
     });
-});
+});*/

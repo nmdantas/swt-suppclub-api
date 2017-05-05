@@ -14,11 +14,12 @@ var Sequelize = require('sequelize');
 
 var sequelize = new Sequelize(process.env.DB_BASE, process.env.DB_USER, process.env.DB_PASS, {
     host: process.env.DB_HOST,
-    dialect: 'mysql',
+    dialect: process.env.DB_DIALECT,
     pool: {
         min: 0,
         max: process.env.DB_POOL_LIMIT
-    }
+    },
+    storage: process.env.DB_STORAGE
 });
 
 // Models
@@ -63,11 +64,12 @@ StoreSchema.belongsToMany(ProductSchema, { through: StoresProducts });
 ProductSchema.belongsToMany(StoreSchema, { through: StoresProducts });
 
 // Cria/Atualiza o banco de dados de acordo com os esquemas (Schema)
-sequelize.sync({
-    force: true
-});
+// sequelize.sync({
+//     force: true
+// });
 
 module.exports = {
+    orm: sequelize,
     Nutrient: NutrientSchema,
     Brand: BrandSchema,
     Store: StoreSchema,
