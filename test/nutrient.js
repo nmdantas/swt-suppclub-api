@@ -15,6 +15,10 @@ app.use(bodyParser.json());
 
 app.use(controllers.nutrient);
 
+var mock = {
+    name: 'Mock'
+}
+
 describe('POST /nutrients', function() {
     it('Obter todas os nutrientes', function(done) {
         request(app)
