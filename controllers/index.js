@@ -9,8 +9,10 @@
 
 var brand = require('./brand');
 var category = require('./category');
+var nutrient = require('./nutrient');
 
 module.exports = {
     brand: brand,
-    category: category
+    category: category,
+    nutrient: nutrient
 }

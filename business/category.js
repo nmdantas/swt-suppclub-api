@@ -26,7 +26,6 @@ module.exports = {
 
 function preValidation(req, res, next) {
     var constraints = framework.common.validation.requiredFor('name');
-
     var validationErrors = framework.common.validation.validate(req.body, constraints);
 
     if (validationErrors) {

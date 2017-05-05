@@ -1,8 +1,8 @@
 /*
- * Brand business layer
+ * Nutrient business layer
  * 
  * Copyright(c) 2017 Fabbrika
- * Author: 2017-04-15 | Nicholas M. Dantas
+ * Author: 2017-05-04 | Nicholas M. Dantas
  */
 
 'use strict';
@@ -38,7 +38,7 @@ function preValidation(req, res, next) {
 }
 
 function create(req, res, next) {
-    accessLayer.Brand.create(req.body).then(function(result) {
+    accessLayer.Nutrient.create(req.body).then(function(result) {
         res.json(result);
     }, function(error) {
         var customError = new framework.models.SwtError({httpCode: 400, message: error.message });
@@ -48,7 +48,7 @@ function create(req, res, next) {
 }
 
 function update(req, res, next) {
-    accessLayer.Brand.update(req.body, { where: { id: req.params.id } }).then(function(result) {
+    accessLayer.Nutrient.update(req.body, { where: { id: req.params.id } }).then(function(result) {
         res.end();
     }, function(error) {
         var customError = new framework.models.SwtError({httpCode: 400, message: error.message });
@@ -60,7 +60,7 @@ function update(req, res, next) {
 function destroy(req, res, next) {
     var id = req.params.id;
 
-    accessLayer.Brand.destroy({ where: { id: id } }).then(function(result) {
+    accessLayer.Nutrient.destroy({ where: { id: id } }).then(function(result) {
         if (result) {
             res.end();
         } else {
@@ -85,24 +85,24 @@ function list(req, res, next) {
 
     // Verifica se a seleção deve ser feita pelo id
     if (id) {
-        accessLayer.Brand.findById(id).then(function(result) {
+        accessLayer.Nutrient.findById(id).then(function(result) {
             if (result) {
                 res.json(result);
             } else {
                 var customError = new framework.models.SwtError({httpCode: 404, message: 'Registro não encontrado' });
 
                 next(customError);
-            }            
+            }
         }, errorCallback);
     } else {
-        accessLayer.Brand.findAll().then(function(results) {
-            var brands = [];
+        accessLayer.Nutrient.findAll().then(function(results) {
+            var categories = [];
 
             for (var i = 0; i < results.length; i++) {
-                brands.push(results[i].dataValues);
+                categories.push(results[i].dataValues);
             }
 
-            res.json(brands);
+            res.json(categories);
         }, errorCallback);
     }
 }
