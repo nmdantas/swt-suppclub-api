@@ -52,5 +52,3 @@ app.use(framework.logger.middleware);
 // Inicia o servidor
 app.listen(PORT);
 console.log('Server Started...');
-
-nicholas
