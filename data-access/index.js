@@ -19,7 +19,8 @@ var sequelize = new Sequelize(process.env.DB_BASE, process.env.DB_USER, process.
         min: 0,
         max: process.env.DB_POOL_LIMIT
     },
-    storage: process.env.DB_STORAGE
+    storage: process.env.DB_STORAGE,
+    logging: false
 });
 
 // Models
@@ -64,9 +65,9 @@ StoreSchema.belongsToMany(ProductSchema, { through: StoresProducts });
 ProductSchema.belongsToMany(StoreSchema, { through: StoresProducts });
 
 // Cria/Atualiza o banco de dados de acordo com os esquemas (Schema)
-// sequelize.sync({
-//     force: true
-// });
+sequelize.sync({
+    force: true
+});
 
 module.exports = {
     orm: sequelize,
