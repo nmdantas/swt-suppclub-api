@@ -47,6 +47,8 @@ app.use(API_PREFIX, controllers.brand);
 app.use(API_PREFIX, controllers.nutrient);
 // Categorias
 app.use(API_PREFIX, controllers.category);
+// Produtos
+app.use(API_PREFIX, controllers.product);
 
 // Middleware de erro
 app.use(framework.logger.middleware);

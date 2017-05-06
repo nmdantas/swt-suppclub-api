@@ -7,12 +7,14 @@
 
 'use strict';
 
-var brand = require('./brand');
+var brand    = require('./brand');
 var category = require('./category');
 var nutrient = require('./nutrient');
+var product  = require('./category');
 
 module.exports = {
     brand: brand,
     category: category,
-    nutrient: nutrient
+    nutrient: nutrient,
+    product: product
 }

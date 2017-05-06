@@ -29,7 +29,7 @@ function preValidation(req, res, next) {
     var validationErrors = framework.common.validation.validate(req.body, constraints);
 
     if (validationErrors) {
-        var error = new framework.models.SwtError({httpCode: 400, details: validationErrors});
+        var error = new framework.models.SwtError({ httpCode: 400, details: validationErrors });
 
         next(error);
     } else {
@@ -41,7 +41,7 @@ function create(req, res, next) {
     accessLayer.Category.create(req.body).then(function(result) {
         res.json(result);
     }, function(error) {
-        var customError = new framework.models.SwtError({httpCode: 400, message: error.message });
+        var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
 
         next(customError);
     });
@@ -49,9 +49,15 @@ function create(req, res, next) {
 
 function update(req, res, next) {
     accessLayer.Category.update(req.body, { where: { id: req.params.id } }).then(function(result) {
-        res.end();
+        if (result[0]) {
+            res.end();
+        } else {
+            var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
+
+            next(customError);
+        }
     }, function(error) {
-        var customError = new framework.models.SwtError({httpCode: 400, message: error.message });
+        var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
 
         next(customError);
     });
@@ -64,12 +70,12 @@ function destroy(req, res, next) {
         if (result) {
             res.end();
         } else {
-            var customError = new framework.models.SwtError({httpCode: 404, message: 'Registro não encontrado' });
+            var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
 
             next(customError);
         }
     }, function(error) {
-        var customError = new framework.models.SwtError({httpCode: 400, message: error.message });
+        var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
 
         next(customError);
     });
@@ -78,7 +84,7 @@ function destroy(req, res, next) {
 function list(req, res, next) {
     var id = req.params.id;
     var errorCallback = function(error) {
-        var customError = new framework.models.SwtError({httpCode: 400, message: error.message });
+        var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
 
         next(customError);
     };
@@ -89,7 +95,7 @@ function list(req, res, next) {
             if (result) {
                 res.json(result);
             } else {
-                var customError = new framework.models.SwtError({httpCode: 404, message: 'Registro não encontrado' });
+                var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
 
                 next(customError);
             }            

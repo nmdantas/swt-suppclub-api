@@ -1,8 +1,8 @@
 /*
- * Brand business layer
+ * Product business layer
  * 
  * Copyright(c) 2017 Fabbrika
- * Author: 2017-04-15 | Nicholas M. Dantas
+ * Author: 2017-05-06 | Nicholas M. Dantas
  */
 
 'use strict';
@@ -38,7 +38,7 @@ function preValidation(req, res, next) {
 }
 
 function create(req, res, next) {
-    accessLayer.Brand.create(req.body).then(function(result) {
+    accessLayer.Category.create(req.body).then(function(result) {
         res.json(result);
     }, function(error) {
         var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
@@ -48,18 +48,7 @@ function create(req, res, next) {
 }
 
 function update(req, res, next) {
-    var id = req.params.id;
-    var identity = framework.common.parseAuthHeader(req.headers.authorization);
-    
-    // Verifica se ha "sessao" criada para o usuario
-    if (global.CacheManager.has(identity.token)) {
-        // Verifica se o usuario tem permissao para editar o status
-        if (global.CacheManager.get(identity.token).roles.indexOf("Admin") == -1) {
-            req.body.status = 3;
-        }
-    }    
-
-    accessLayer.Brand.update(req.body, { where: { id: id, deletedAt: null } }).then(function(result) {
+    accessLayer.Category.update(req.body, { where: { id: req.params.id } }).then(function(result) {
         if (result[0]) {
             res.end();
         } else {
@@ -77,7 +66,7 @@ function update(req, res, next) {
 function destroy(req, res, next) {
     var id = req.params.id;
 
-    accessLayer.Brand.destroy({ where: { id: id } }).then(function(result) {
+    accessLayer.Category.destroy({ where: { id: id } }).then(function(result) {
         if (result) {
             res.end();
         } else {
@@ -102,7 +91,7 @@ function list(req, res, next) {
 
     // Verifica se a seleção deve ser feita pelo id
     if (id) {
-        accessLayer.Brand.findById(id).then(function(result) {
+        accessLayer.Category.findById(id).then(function(result) {
             if (result) {
                 res.json(result);
             } else {
@@ -112,14 +101,14 @@ function list(req, res, next) {
             }            
         }, errorCallback);
     } else {
-        accessLayer.Brand.findAll().then(function(results) {
-            var brands = [];
+        accessLayer.Category.findAll().then(function(results) {
+            var categories = [];
 
             for (var i = 0; i < results.length; i++) {
-                brands.push(results[i].dataValues);
+                categories.push(results[i].dataValues);
             }
 
-            res.json(brands);
+            res.json(categories);
         }, errorCallback);
     }
 }

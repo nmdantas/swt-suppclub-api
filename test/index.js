@@ -29,6 +29,7 @@ app.use(bodyParser.json());
 app.use(controllers.brand);
 app.use(controllers.nutrient);
 app.use(controllers.category);
+app.use(controllers.product);
 
 app.use(framework.logger.middleware);
 
@@ -44,4 +45,10 @@ before('Sync test database', function(done) {
 });
 
 // Marcas
-require('./brand')(app);
+require('./cases/brand')(app);
+// Nutrientes
+require('./cases/nutrient')(app);
+// Categorias
+require('./cases/category')(app);
+// Produtos
+//require('./cases/product')(app);
