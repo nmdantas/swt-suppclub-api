@@ -48,7 +48,9 @@ function create(req, res, next) {
 }
 
 function update(req, res, next) {
-    accessLayer.Category.update(req.body, { where: { id: req.params.id } }).then(function(result) {
+    var id = req.params.id;
+
+    accessLayer.Category.update(req.body, { where: { id: id, deletedAt: null } }).then(function(result) {
         if (result[0]) {
             res.end();
         } else {

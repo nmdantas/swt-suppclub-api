@@ -11,8 +11,7 @@
  * Module dependencies.
  */
 var Sequelize = require('sequelize');
-
-var sequelize = new Sequelize(process.env.DB_BASE, process.env.DB_USER, process.env.DB_PASS, {
+var options = {
     host: process.env.DB_HOST,
     dialect: process.env.DB_DIALECT,
     pool: {
@@ -21,7 +20,12 @@ var sequelize = new Sequelize(process.env.DB_BASE, process.env.DB_USER, process.
     },
     storage: process.env.DB_STORAGE,
     logging: false
-});
+};
+// Timezone não é suportado no SQLite
+if (process.env.DB_DIALECT !== 'sqlite') {
+    options.timezone = 'America/Sao_Paulo'
+}
+var sequelize = new Sequelize(process.env.DB_BASE, process.env.DB_USER, process.env.DB_PASS, options);
 
 // Models
 var NutrientSchema = sequelize.import('./models/nutrient');

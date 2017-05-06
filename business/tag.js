@@ -1,8 +1,8 @@
 /*
- * Product business layer
+ * Tag business layer
  * 
  * Copyright(c) 2017 Fabbrika
- * Author: 2017-05-06 | Nicholas M. Dantas
+ * Author: 2017-04-15 | Nicholas M. Dantas
  */
 
 'use strict';
@@ -25,7 +25,7 @@ module.exports = {
 };
 
 function preValidation(req, res, next) {
-    var constraints = framework.common.validation.requiredFor('name', 'brand', 'category');
+    var constraints = framework.common.validation.requiredFor('name');
     var validationErrors = framework.common.validation.validate(req.body, constraints);
 
     if (validationErrors) {
@@ -38,37 +38,8 @@ function preValidation(req, res, next) {
 }
 
 function create(req, res, next) {
-    var responseBody = {};
-
-    accessLayer.orm.transaction(function(t) {
-        return accessLayer.Product.create(req.body, { transaction: t }).then(function(product) {  
-
-            return product.setBrand(req.body.brand, { transaction: t }).then(function() {
-
-                return product.setCategory(req.body.category, { transaction: t }).then(function() {
-
-                    return product.addTags(req.body.tags, { transaction: t }).then(function() {
-                        var nutrients = req.body.nutrients || [];
-                        var keys = [];
-                        var associations = [];
-
-                        for (var i = 0; i < nutrients.length; i++) {
-                            keys.push(nutrients[i].id);
-                            associations.push({
-                                value: nutrients[i].value,
-                                portion: nutrients[i].portion
-                            });
-                        }
-
-                        return product.addNutrients(keys, { associations, transaction: t }).then(function() {
-                            responseBody = product;
-                        });
-                    })
-                });
-            });
-        });
-    }).then(function(result) {
-        res.json(responseBody);
+    accessLayer.Tag.create(req.body).then(function(result) {
+        res.json(result);
     }, function(error) {
         var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
 
@@ -78,8 +49,8 @@ function create(req, res, next) {
 
 function update(req, res, next) {
     var id = req.params.id;
-    
-    accessLayer.Product.update(req.body, { where: { id: id, deletedAt: null } }).then(function(result) {
+
+    accessLayer.Tag.update(req.body, { where: { id: id, deletedAt: null } }).then(function(result) {
         if (result[0]) {
             res.end();
         } else {
@@ -97,7 +68,7 @@ function update(req, res, next) {
 function destroy(req, res, next) {
     var id = req.params.id;
 
-    accessLayer.Product.destroy({ where: { id: id } }).then(function(result) {
+    accessLayer.Tag.destroy({ where: { id: id } }).then(function(result) {
         if (result) {
             res.end();
         } else {
@@ -122,7 +93,7 @@ function list(req, res, next) {
 
     // Verifica se a seleção deve ser feita pelo id
     if (id) {
-        accessLayer.Product.findById(id, { include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient ] }).then(function(result) {
+        accessLayer.Tag.findById(id).then(function(result) {
             if (result) {
                 res.json(result);
             } else {
@@ -132,14 +103,14 @@ function list(req, res, next) {
             }            
         }, errorCallback);
     } else {
-        accessLayer.Product.findAll().then(function(results) {
-            var products = [];
+        accessLayer.Tag.findAll().then(function(results) {
+            var categories = [];
 
             for (var i = 0; i < results.length; i++) {
-                products.push(results[i].dataValues);
+                categories.push(results[i].dataValues);
             }
 
-            res.json(products);
+            res.json(categories);
         }, errorCallback);
     }
 }

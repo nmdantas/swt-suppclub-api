@@ -47,6 +47,8 @@ app.use(API_PREFIX, controllers.brand);
 app.use(API_PREFIX, controllers.nutrient);
 // Categorias
 app.use(API_PREFIX, controllers.category);
+// Tags
+app.use(API_PREFIX, controllers.tag);
 // Produtos
 app.use(API_PREFIX, controllers.product);
 
