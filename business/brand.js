@@ -48,6 +48,13 @@ function create(req, res, next) {
 }
 
 function update(req, res, next) {
+
+    var cacheManager = global.CacheManager.get(framework.common.parseAuthHeader(req.headers.authorization).token);
+
+    if(cacheManager.roles.indexOf("Admin") == -1){
+        req.body.status = 3;
+    }
+
     accessLayer.Brand.update(req.body, { where: { id: req.params.id } }).then(function(result) {
         res.end();
     }, function(error) {

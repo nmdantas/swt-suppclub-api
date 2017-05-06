@@ -4,7 +4,8 @@
   "description": "The newest SWT application",
   "main": "index.js",
   "scripts": {
-    "test": "mocha -R spec"
+    "test": "mocha -R spec",
+    "start": "node index.js"
   },
   "repository": {
     "type": "git",
