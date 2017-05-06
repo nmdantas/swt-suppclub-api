@@ -44,7 +44,9 @@ describe('POST /brands', function() {
         doneCallback = done;
 
         var mock = {
-            name: 'SomeBrand'
+            name: 'SomeBrand',
+            description:'SomeDescription',
+            status: 2
         };
         
         request(app).post('/brands')
