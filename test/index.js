@@ -29,6 +29,7 @@ app.use(bodyParser.json());
 app.use(controllers.brand);
 app.use(controllers.nutrient);
 app.use(controllers.category);
+app.use(controllers.tag);
 app.use(controllers.product);
 
 app.use(framework.logger.middleware);
@@ -50,5 +51,7 @@ require('./cases/brand')(app);
 require('./cases/nutrient')(app);
 // Categorias
 require('./cases/category')(app);
+// Tags
+require('./cases/tag')(app);
 // Produtos
-//require('./cases/product')(app);
+require('./cases/product')(app);

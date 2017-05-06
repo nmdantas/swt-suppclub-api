@@ -1,5 +1,5 @@
 /*
- * Category's tests
+ * Tag's tests
  *
  * Copyright(c) 2017 Fabbrika
  * Author: 2017-05-06 | Nicholas M. Dantas
@@ -11,13 +11,13 @@ var assert  = require('assert');
 var request = require('supertest');
 var app     = null;
 
-describe('POST /categories', function() {
+describe('POST /tags', function() {
     it('Deve retornar 200 e criar um novo registro', function(done) {
         var mock = {
             name: 'Something'
         };
         
-        request(app).post('/categories')
+        request(app).post('/tags')
                     .send(mock)
                     .set('Accept', 'application/json')
                     .expect(200, done);
@@ -28,20 +28,20 @@ describe('POST /categories', function() {
             invalid: 'Something'
         };
         
-        request(app).post('/categories')
+        request(app).post('/tags')
                     .send(mock)
                     .set('Accept', 'application/json')
                     .expect(400, done);
     });
 });
 
-describe('PUT /categories', function() {
+describe('PUT /tags', function() {
     it('Deve retornar 200 e atualizar um registro existente', function(done) {
         var mock = {
             name: 'Change'
         };
         
-        request(app).put('/categories/1')
+        request(app).put('/tags/1')
                     .send(mock)
                     .set('Accept', 'application/json')
                     .expect(200, done);
@@ -52,54 +52,54 @@ describe('PUT /categories', function() {
             invalid: 'Nothing'
         };
         
-        request(app).put('/categories/1')
+        request(app).put('/tags/1')
                     .send(mock)
                     .set('Accept', 'application/json')
                     .expect(400, done);
     });
 });
 
-describe('GET /categories', function() {
+describe('GET /tags', function() {
     it('Deve retornar 200 e listar todas os registros', function(done) {
 
-        request(app).get('/categories')
+        request(app).get('/tags')
                     .set('Accept', 'application/json')
                     .expect(200, done);
     });
 
     it('Deve retornar 200 e retornar apenas o registro selecionado', function(done) {
 
-        request(app).get('/categories/1')
+        request(app).get('/tags/1')
                     .set('Accept', 'application/json')
                     .expect(200, done);
     });
 
     it('Deve retornar 404 quando não encontrar o registro', function(done) {
 
-        request(app).get('/categories/2')
+        request(app).get('/tags/2')
                     .set('Accept', 'application/json')
                     .expect(404, done);
     });
 });
 
-describe('DELETE /categories', function() {
+describe('DELETE /tags', function() {
     it('Deve retornar 200 e excluir o registro', function(done) {
         
-        request(app).delete('/categories/1')
+        request(app).delete('/tags/1')
                     .set('Accept', 'application/json')
                     .expect(200, done);
     });
 
     it('Deve retornar 404 quando tentar excluir um registro inativo', function(done) {
 
-        request(app).delete('/categories/1')
+        request(app).delete('/tags/1')
                     .set('Accept', 'application/json')
                     .expect(404, done);
     });
 
     it('Deve retornar 404 quando não encontrar o registro', function(done) {
 
-        request(app).delete('/categories/2')
+        request(app).delete('/tags/2')
                     .set('Accept', 'application/json')
                     .expect(404, done);
     });

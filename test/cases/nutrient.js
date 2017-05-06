@@ -14,7 +14,7 @@ var app     = null;
 describe('POST /nutrients', function() {
     it('Deve retornar 200 e criar um novo registro', function(done) {
         var mock = {
-            name: 'SomeBrand'
+            name: 'Something'
         };
         
         request(app).post('/nutrients')
@@ -25,7 +25,7 @@ describe('POST /nutrients', function() {
 
     it('Deve retornar 400 quando a entrada for inválida', function(done) {
         var mock = {
-            invalid: 'SomeBrand'
+            invalid: 'Something'
         };
         
         request(app).post('/nutrients')
@@ -38,7 +38,7 @@ describe('POST /nutrients', function() {
 describe('PUT /nutrients', function() {
     it('Deve retornar 200 e atualizar um registro existente', function(done) {
         var mock = {
-            name: 'AnotherBrand'
+            name: 'Change'
         };
         
         request(app).put('/nutrients/1')
@@ -49,7 +49,7 @@ describe('PUT /nutrients', function() {
 
     it('Deve retornar 400 quando a entrada for inválida', function(done) {
         var mock = {
-            invalid: 'AnotherBrand'
+            invalid: 'Nothing'
         };
         
         request(app).put('/nutrients/1')
