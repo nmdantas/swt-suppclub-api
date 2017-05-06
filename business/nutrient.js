@@ -15,6 +15,7 @@ module.exports = {
     list: list,
     create:[
         preValidation,
+        hasSameRegistered,
         create
     ],
     update: [
@@ -37,6 +38,21 @@ function preValidation(req, res, next) {
     }
 }
 
+function hasSameRegistered(req, res, next) {
+    accessLayer.Nutrient.findAll({ where: { name: { $like: req.body.name } } }).then(function(result) {
+        if (result) {
+
+            
+
+            next();
+        } else {
+            var customError = new framework.models.SwtError({httpCode: 404, message: 'Registro não encontrado' });
+
+            next(customError);
+        }
+    }, errorCallback);
+}
+
 function create(req, res, next) {
     accessLayer.Nutrient.create(req.body).then(function(result) {
         res.json(result);
@@ -48,6 +64,13 @@ function create(req, res, next) {
 }
 
 function update(req, res, next) {
+
+    var cacheManager = global.CacheManager.get(framework.common.parseAuthHeader(req.headers.authorization).token);
+
+    if(cacheManager.roles.indexOf("Admin") == -1){
+        req.body.status = 3;
+    }
+
     accessLayer.Nutrient.update(req.body, { where: { id: req.params.id } }).then(function(result) {
         res.end();
     }, function(error) {

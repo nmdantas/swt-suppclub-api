@@ -9,7 +9,9 @@
 
 module.exports = function(sequelize, DataType) {
     return sequelize.define('Nutrient', {
-        name: { type: DataType.STRING, allowNull: false }
+        name: { type: DataType.STRING, allowNull: false },
+        description: { type: DataType.STRING, allowNull: true },
+        status: { type: DataType.INTEGER, allowNull: false, defaultValue: 3 }
     }, {
         paranoid: true,
         underscored: false

@@ -43,6 +43,8 @@ app.use(framework.security.checkAuthorization);
 app.use(API_PREFIX, userManager.controllers.user);
 // Marcas
 app.use(API_PREFIX, controllers.brand);
+// Nutrientes
+app.use(API_PREFIX, controllers.nutrient);
 // Categorias
 app.use(API_PREFIX, controllers.category);
 
