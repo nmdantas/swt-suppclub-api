@@ -49,20 +49,19 @@ function create(req, res, next) {
 
                     return product.addTags(req.body.tags, { transaction: t }).then(function() {
                         var nutrients = req.body.nutrients || [];
-                        var keys = [];
-                        var associations = [];
-
+                        
                         for (var i = 0; i < nutrients.length; i++) {
-                            keys.push(nutrients[i].id);
-                            associations.push({
-                                value: nutrients[i].value,
-                                portion: nutrients[i].portion
-                            });
+                            nutrients[i].ProductId = product.id;
+                            nutrients[i].NutrientId = nutrients[i].id;
                         }
 
-                        return product.addNutrients(keys, { associations, transaction: t }).then(function() {
+                        return accessLayer.ProductsNutrients.bulkCreate(nutrients).then(function(n) {
                             responseBody = product;
                         });
+
+                        // return product.addNutrients(keys, { associations, transaction: t }).then(function() {
+                        //     responseBody = product;
+                        // });
                     })
                 });
             });

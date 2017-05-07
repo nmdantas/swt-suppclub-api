@@ -85,10 +85,8 @@ describe('POST /products', function() {
             tags: [1, 2],
             nutrients: [{
                 id: 1,
-                info: {
-                    value: '4,5g',
-                    portion: '30g'
-                }
+                value: '4,5g',
+                portion: '30g'                
             }]
         };
         

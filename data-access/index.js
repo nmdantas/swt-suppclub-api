@@ -82,5 +82,6 @@ module.exports = {
     Tag: TagSchema,
     Objective: ObjectiveSchema,
     Category: CategorySchema,
-    Product: ProductSchema
+    Product: ProductSchema,
+    ProductsNutrients: ProductsNutrients
 };
