@@ -38,6 +38,7 @@ function preValidation(req, res, next) {
 }
 
 function create(req, res, next) {
+    req.body.categoryId = req.body.categoryId == "0" ? null : req.body.categoryId;
     accessLayer.Category.create(req.body).then(function(result) {
         res.json(result);
     }, function(error) {
@@ -49,7 +50,7 @@ function create(req, res, next) {
 
 function update(req, res, next) {
     var id = req.params.id;
-
+    req.body.categoryId = (req.body.categoryId == "0" || req.body.categoryId == "null") ? null : req.body.categoryId;
     accessLayer.Category.update(req.body, { where: { id: id, deletedAt: null } }).then(function(result) {
         if (result[0]) {
             res.end();
@@ -103,7 +104,7 @@ function list(req, res, next) {
             }            
         }, errorCallback);
     } else {
-        accessLayer.Category.findAll().then(function(results) {
+        accessLayer.Category.findAll({ include: [{ all: true }]}).then(function(results) {
             var categories = [];
 
             for (var i = 0; i < results.length; i++) {

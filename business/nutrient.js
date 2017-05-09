@@ -15,11 +15,12 @@ module.exports = {
     list: list,
     create:[
         preValidation,
-        /*hasSameRegistered,*/
+        hasSameRegistered,
         create
     ],
     update: [
         preValidation,
+        hasSameRegistered,
         update
     ],
     delete: destroy
@@ -39,12 +40,29 @@ function preValidation(req, res, next) {
 }
 
 function hasSameRegistered(req, res, next) {
-    accessLayer.Nutrient.findAll({ where: { name: { $like: req.body.name } } }).then(function(result) {
+    var varId = req.body.id || 0;
+    var errorCallback = function(error) {
+        var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
+
+        next(customError);
+    };
+
+    accessLayer.Nutrient.findAll({ 
+        where: {
+            id: { $ne: varId }, 
+            name: { $like: req.body.name  }
+        }
+    }).then(function(result) {
         if (result) {
 
-            
+            if (result.length > 0) {
+                var customError = new framework.models.SwtError({ httpCode: 400, message: 'Nutriente já cadastrado!' });
 
-            next();
+                next(customError);
+            } else {
+                next();
+            }
+
         } else {
             var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
 

@@ -9,7 +9,8 @@
 
 module.exports = function(sequelize, DataType) {
     return sequelize.define('Category', {
-        name: { type: DataType.STRING, allowNull: false }
+        name: { type: DataType.STRING, allowNull: false },
+        description: { type: DataType.STRING, allowNull: true }
     }, {
         paranoid: true,
         underscored: false

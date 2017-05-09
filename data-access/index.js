@@ -43,6 +43,10 @@ var ObjectivesTags = sequelize.define('ObjectivesTags', {}, { freezeTableName: t
 ObjectiveSchema.belongsToMany(TagSchema, { through: ObjectivesTags })
 TagSchema.belongsToMany(ObjectiveSchema, { through: ObjectivesTags });
 
+// Associação de Hierarquida de categorias
+CategorySchema.hasMany(CategorySchema, { foreignKey: 'categoryId', as: 'categories' });
+CategorySchema.belongsTo(CategorySchema, { foreignKey: 'categoryId', as: 'parent' });
+
 // Associações de Produto
 var ProductsTags = sequelize.define('ProductsTags', {}, { freezeTableName: true });
 var ProductsNutrients = sequelize.define('ProductsNutrients', {
@@ -69,9 +73,9 @@ StoreSchema.belongsToMany(ProductSchema, { through: StoresProducts });
 ProductSchema.belongsToMany(StoreSchema, { through: StoresProducts });
 
 // Cria/Atualiza o banco de dados de acordo com os esquemas (Schema)
-// sequelize.sync({
-//     force: true
-// });
+ sequelize.sync({
+     force: true
+});
 
 module.exports = {
     orm: sequelize,
