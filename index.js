@@ -51,6 +51,8 @@ app.use(API_PREFIX, controllers.category);
 app.use(API_PREFIX, controllers.tag);
 // Produtos
 app.use(API_PREFIX, controllers.product);
+// Objetivos
+app.use(API_PREFIX, controllers.objective);
 
 // Middleware de erro
 app.use(framework.logger.middleware);
