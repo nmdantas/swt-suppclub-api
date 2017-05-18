@@ -38,9 +38,24 @@ function preValidation(req, res, next) {
 }
 
 function create(req, res, next) {
-    
-    accessLayer.Objective.create(req.body).then(function(result) {
-        res.json(result);
+    var responseBody = {};
+
+    accessLayer.orm.transaction(function(t) {
+        return accessLayer.Objective.create(req.body, { transaction: t }).then(function(objective) { 
+
+            var tags = req.body.tags || [];
+                        
+            for (var i = 0; i < tags.length; i++) {
+                tags[i].ObjectiveId = objective.id;
+                tags[i].TagId = tags[i].id;
+            }
+
+            return accessLayer.ObjectivesTags.bulkCreate(tags).then(function(n) {
+                responseBody = objective;
+            });     
+        });
+    }).then(function(result) {
+        res.json(responseBody);
     }, function(error) {
         var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
 
