@@ -31,6 +31,7 @@ app.use(controllers.nutrient);
 app.use(controllers.category);
 app.use(controllers.tag);
 app.use(controllers.product);
+app.use(controllers.objective);
 
 app.use(framework.logger.middleware);
 
@@ -45,13 +46,15 @@ before('Sync test database', function(done) {
     });
 });
 
-// Marcas
-require('./cases/brand')(app);
-// Nutrientes
-require('./cases/nutrient')(app);
-// Categorias
-require('./cases/category')(app);
-// Tags
-require('./cases/tag')(app);
-// Produtos
-require('./cases/product')(app);
+// // Marcas
+// require('./cases/brand')(app);
+// // Nutrientes
+// require('./cases/nutrient')(app);
+// // Categorias
+// require('./cases/category')(app);
+// // Tags
+// require('./cases/tag')(app);
+// // Produtos
+// require('./cases/product')(app);
+// Objetivos
+require('./cases/objective')(app);

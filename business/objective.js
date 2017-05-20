@@ -40,19 +40,22 @@ function preValidation(req, res, next) {
 function create(req, res, next) {
     var responseBody = {};
 
+    // accessLayer.Objective.create(req.body, { 
+    //     include: [{ model: accessLayer.Tag, as: 'tags' }] 
+    // }).then(function(objective) {
+    //     res.json(objective);
+    // }, function(error) {
+    //     var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
+
+    //     next(customError);
+    // });
+
     accessLayer.orm.transaction(function(t) {
-        return accessLayer.Objective.create(req.body, { transaction: t }).then(function(objective) { 
+        return accessLayer.Objective.create(req.body, { transaction: t }).then(function(objective) {
 
-            var tags = req.body.tags || [];
-                        
-            for (var i = 0; i < tags.length; i++) {
-                tags[i].ObjectiveId = objective.id;
-                tags[i].TagId = tags[i].id;
-            }
-
-            return accessLayer.ObjectivesTags.bulkCreate(tags).then(function(n) {
+            return objective.addTags(req.body.tags, { transaction: t }).then(function(tags) {
                 responseBody = objective;
-            });     
+            });
         });
     }).then(function(result) {
         res.json(responseBody);
@@ -109,7 +112,9 @@ function list(req, res, next) {
 
     // Verifica se a seleção deve ser feita pelo id
     if (id) {
-        accessLayer.Objective.findById(id).then(function(result) {
+        accessLayer.Objective.findById(id, {             
+            include: [{model: accessLayer.Tag, attributes: ['id', 'name'] }]
+        }).then(function(result) {
             if (result) {
                 res.json(result);
             } else {
