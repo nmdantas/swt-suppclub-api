@@ -52,10 +52,11 @@ function create(req, res, next) {
 
     accessLayer.orm.transaction(function(t) {
         return accessLayer.Objective.create(req.body, { transaction: t }).then(function(objective) {
-
-            return objective.addTags(req.body.tags, { transaction: t }).then(function(tags) {
-                responseBody = objective;
-            });
+            responseBody = objective;
+            return objective.setTags(req.body.Tags, { transaction: t });
+                //.then(function(tags) {
+                //    responseBody = objective;  TIO... NÃO SEI MAIS O QUE TENTAR FAZER NESSA MER...... SÓ DA ERRO
+                //});
         });
     }).then(function(result) {
         res.json(responseBody);
