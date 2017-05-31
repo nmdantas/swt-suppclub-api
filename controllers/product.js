@@ -17,4 +17,6 @@ router.get('/products/:id', business.list);
 router.put('/products/:id', business.update);
 router.delete('/products/:id', business.delete);
 
+router.post('/products/image', business.uploadImage);
+
 module.exports = router;

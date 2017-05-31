@@ -21,7 +21,8 @@ module.exports = {
         preValidation,
         update
     ],
-    delete: destroy
+    delete: destroy,
+    uploadImage: uploadImage
 };
 
 function preValidation(req, res, next) {
@@ -141,4 +142,21 @@ function list(req, res, next) {
             res.json(products);
         }, errorCallback);
     }
+}
+
+function uploadImage(req, res, next) {
+
+    var image = req.body.images[0].imageBase64;
+
+    framework.media.image.upload(image)
+        .then(function (result) {
+            console.log('** file uploaded to Cloudinary service');
+            console.dir(result);
+
+            res.json(result);
+        }, function(error) {
+            var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
+
+            next(customError);
+        });
 }
