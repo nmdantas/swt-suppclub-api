@@ -40,23 +40,11 @@ function preValidation(req, res, next) {
 function create(req, res, next) {
     var responseBody = {};
 
-    // accessLayer.Objective.create(req.body, { 
-    //     include: [{ model: accessLayer.Tag, as: 'tags' }] 
-    // }).then(function(objective) {
-    //     res.json(objective);
-    // }, function(error) {
-    //     var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
-
-    //     next(customError);
-    // });
-
     accessLayer.orm.transaction(function(t) {
         return accessLayer.Objective.create(req.body, { transaction: t }).then(function(objective) {
-            responseBody = objective;
-            return objective.setTags(req.body.Tags, { transaction: t });
-                //.then(function(tags) {
-                //    responseBody = objective;  TIO... NÃO SEI MAIS O QUE TENTAR FAZER NESSA MER...... SÓ DA ERRO
-                //});
+            return objective.setTags(req.body.tags, { transaction: t }).then(function(tags) {
+                responseBody = objective;
+            });
         });
     }).then(function(result) {
         res.json(responseBody);
