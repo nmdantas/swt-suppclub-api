@@ -22,7 +22,10 @@ module.exports = {
         update
     ],
     delete: destroy,
-    uploadImage: uploadImage
+    uploadImage: [ 
+        uploadImage,
+        saveImage
+    ]
 };
 
 function preValidation(req, res, next) {
@@ -151,12 +154,18 @@ function uploadImage(req, res, next) {
     framework.media.image.upload(image)
         .then(function (result) {
             console.log('** file uploaded to Cloudinary service');
-            console.dir(result);
 
             res.json(result);
+            
+            next();
         }, function(error) {
             var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
 
             next(customError);
         });
+}
+
+function saveImage(req, res, next) {
+
+    
 }
