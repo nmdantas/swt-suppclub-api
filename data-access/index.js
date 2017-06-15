@@ -64,14 +64,14 @@ TagSchema.belongsToMany(ProductSchema, { through: ProductsTags, foreignKey: 'tag
 NutrientSchema.belongsToMany(ProductSchema, { through: ProductsNutrients, foreignKey: 'nutrientId', otherKey: 'productId' });
 
 // Associações de Lojas x Produtos
-var StoresProducts = sequelize.define('StoresProducts', {
+var ProductsStores = sequelize.define('ProductsStores', {
     reference: Sequelize.STRING,
     stock: Sequelize.INTEGER,
     price: Sequelize.DECIMAL(10, 2)
 }, { freezeTableName: true });
 
-StoreSchema.belongsToMany(ProductSchema, { through: StoresProducts, foreignKey: 'storeId', otherKey: 'productId' });
-ProductSchema.belongsToMany(StoreSchema, { through: StoresProducts, foreignKey: 'productId', otherKey: 'storeId' });
+StoreSchema.belongsToMany(ProductSchema, { through: ProductsStores, foreignKey: 'storeId', otherKey: 'productId' });
+ProductSchema.belongsToMany(StoreSchema, { through: ProductsStores, foreignKey: 'productId', otherKey: 'storeId' });
 
 // Cria (sobrescreve caso já exista) o banco de dados de acordo com os esquemas (Schema)
 // sequelize.sync({
@@ -89,6 +89,7 @@ module.exports = {
     Objective: ObjectiveSchema,
     Category: CategorySchema,
     Product: ProductSchema,
+    ProductsStores: ProductsStores,
     ProductsNutrients: ProductsNutrients,
     ObjectivesTags: ObjectivesTags
 };

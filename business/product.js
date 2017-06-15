@@ -42,13 +42,23 @@ function preValidation(req, res, next) {
 }
 
 function create(req, res, next) {
+    //var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
     var responseBody = {};
 
     accessLayer.orm.transaction(function(t) {
         return accessLayer.Product.create(req.body, { transaction: t }).then(function(product) {  
 
             return product.setTags(req.body.tags, { transaction: t }).then(function(tags) {
-                responseBody = product;
+
+                return accessLayer.ProductsStores.bulkCreate([{
+                    storeId: req.body.storeId,
+                    productId: product.dataValues.id,
+                    reference: req.body.reference,
+                    stock: req.body.stock || 0,
+                    price: req.body.price || 0.0
+                }], { transaction: t }).then(function(productsStores) {
+                    responseBody = product;
+                });
             });
         });
     }).then(function(result) {
@@ -75,7 +85,16 @@ function update(req, res, next) {
             return accessLayer.Product.findById(id, { transaction: t }).then(function(product) {
 
                 return product.setTags(req.body.tags, { transaction: t }).then(function(tags) {
-                    productUpToDate = product;
+                    
+                    return accessLayer.ProductsStores.bulkCreate([{
+                        storeId: req.body.storeId,
+                        productId: id,
+                        reference: req.body.reference,
+                        stock: req.body.stock || 0,
+                        price: req.body.price || 0.0
+                    }], { transaction: t }).then(function(productsStores) {
+                        productUpToDate = product;
+                    });
                 });
             });
         });
@@ -126,7 +145,7 @@ function list(req, res, next) {
             }            
         }, errorCallback);
     } else {
-        accessLayer.Product.findAll().then(function(results) {
+        accessLayer.Product.findAll({ include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient ] }).then(function(results) {
             var products = [];
 
             for (var i = 0; i < results.length; i++) {

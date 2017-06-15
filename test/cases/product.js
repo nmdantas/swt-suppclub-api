@@ -12,52 +12,56 @@ var request = require('supertest');
 var accessLayer = require('./../../data-access');
 var app     = null;
 
-describe('POST /products', function() {
-    before('Feed data for product', function(done) {
-        console.log('    Feed data for product...');
-        this.timeout(5000);
+before('Feed data for product', function(done) {
+    console.log('    Feed data for product...');
+    this.timeout(5000);
 
-        // Database
-        accessLayer.orm.sync({
-            force: true
-        }).then(function() {
-            // Brand
-            accessLayer.Brand.bulkCreate([
-                { id: 1, name: 'The Brand' },
-                { id: 2, name: 'The Brand Part II' }
-            ]).then(function(brands) {
-                // Category
-                accessLayer.Category.bulkCreate([
-                    { id: 1, name: 'A Category' },
-                    { id: 2, name: 'Another Category' }
-                ]).then(function(category) {
-                    // Tags
-                    accessLayer.Tag.bulkCreate([
-                        { id: 1, name: 'Tag1' },
-                        { id: 2, name: 'Tag2' }
-                    ]).then(function(tags) {
-                        // Nutrients
-                        accessLayer.Nutrient.bulkCreate([
-                            { id: 1, name: 'Nutrient1' },
-                            { id: 2, name: 'Nutrient2' }
-                        ]).then(function(nutrients) {
-                            // Pronto para os testes
-                            done();
-                        });;
-                    });
+    // Database
+    accessLayer.orm.sync({
+        force: true
+    }).then(function() {
+        // Brand
+        accessLayer.Brand.bulkCreate([
+            { id: 1, name: 'The Brand' },
+            { id: 2, name: 'The Brand Part II' }
+        ]).then(function(brands) {
+            // Category
+            accessLayer.Category.bulkCreate([
+                { id: 1, name: 'A Category' },
+                { id: 2, name: 'Another Category' }
+            ]).then(function(category) {
+                // Tags
+                accessLayer.Tag.bulkCreate([
+                    { id: 1, name: 'Tag1' },
+                    { id: 2, name: 'Tag2' }
+                ]).then(function(tags) {
+                    // Nutrients
+                    accessLayer.Nutrient.bulkCreate([
+                        { id: 1, name: 'Nutrient1' },
+                        { id: 2, name: 'Nutrient2' }
+                    ]).then(function(nutrients) {
+                        // Pronto para os testes
+                        done();
+                    });;
                 });
-            }); 
-        });   
-    });
+            });
+        }); 
+    });   
+});
 
+describe('POST /products', function() {
     it('Deve retornar 200 e criar um novo registro', function(done) {
         var mock = {
             name: 'Something',
             description: 'Description',
             contraindication: 'None',
             status: 'Available',
+            reference: 'CODE',
+            stock: 10,
+            price: 100.0,
+            storeId: 0,
             brandId: 2,
-            categoryId: 2,
+            categoryId: 2,            
             tags: [1, 2]
         };
         
@@ -101,8 +105,12 @@ describe('PUT /products', function() {
             description: 'New Description',
             contraindication: 'None',
             status: 'Available',
-            brandId: 1, // Mudanca de marca
-            categoryId: 1, // mudanca de categoria
+            reference: 'CODE',
+            stock: 9,
+            price: 90.0,
+            storeId: 0,
+            brandId: 1,
+            categoryId: 1,
             tags: [2]
         };
         
