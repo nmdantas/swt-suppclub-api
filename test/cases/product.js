@@ -22,13 +22,15 @@ describe('POST /products', function() {
             force: true
         }).then(function() {
             // Brand
-            accessLayer.Brand.create({
-                name: 'The Brand'
-            }).then(function(brand) {
+            accessLayer.Brand.bulkCreate([
+                { id: 1, name: 'The Brand' },
+                { id: 2, name: 'The Brand Part II' }
+            ]).then(function(brands) {
                 // Category
-                accessLayer.Category.create({
-                    name: 'A Category'
-                }).then(function(category) {
+                accessLayer.Category.bulkCreate([
+                    { id: 1, name: 'A Category' },
+                    { id: 2, name: 'Another Category' }
+                ]).then(function(category) {
                     // Tags
                     accessLayer.Tag.bulkCreate([
                         { id: 1, name: 'Tag1' },
@@ -54,24 +56,24 @@ describe('POST /products', function() {
             description: 'Description',
             contraindication: 'None',
             status: 'Available',
-            brand: 1,
-            category: 1,
-            tags: [1, 2],
-            nutrients: [{
-                id: 1,
-                value: '4,5g',
-                portion: '30g'
-            }, {
-                id: 2,                
-                value: '10g',
-                portion: '40g'
-            }]
+            brandId: 2,
+            categoryId: 2,
+            tags: [1, 2]
         };
         
         request(app).post('/products')
                     .send(mock)
                     .set('Accept', 'application/json')
-                    .expect(200, done);
+                    .expect(200, function(err, res) {
+                        //console.log(res.body);
+                        // Valor Atualizado
+                        if (res.body.brandId == 2 &&
+                            res.body.categoryId == 2) {
+                            done();
+                        } else {
+                            done(new Error('Registro não criado devidamente'));
+                        }
+                    });
     });
 
     it('Deve retornar 400 quando a entrada for inválida', function(done) {
@@ -82,12 +84,7 @@ describe('POST /products', function() {
             status: 'Available',
             invalidBrand: 1,
             invalidCategory: 1,
-            tags: [1, 2],
-            nutrients: [{
-                id: 1,
-                value: '4,5g',
-                portion: '30g'                
-            }]
+            tags: [1, 2]
         };
         
         request(app).post('/products')
@@ -97,16 +94,31 @@ describe('POST /products', function() {
     });
 });
 
-describe.skip('PUT /products', function() {
+describe('PUT /products', function() {
     it('Deve retornar 200 e atualizar um registro existente', function(done) {
         var mock = {
-            name: 'Change'
+            name: 'Something Changed',
+            description: 'New Description',
+            contraindication: 'None',
+            status: 'Available',
+            brandId: 1, // Mudanca de marca
+            categoryId: 1, // mudanca de categoria
+            tags: [2]
         };
         
         request(app).put('/products/1')
                     .send(mock)
                     .set('Accept', 'application/json')
-                    .expect(200, done);
+                    .expect(200, function(err, res) {
+                        //console.log(res.body);
+                        // Valor Atualizado
+                        if (res.body.brandId == 1 &&
+                            res.body.categoryId == 1) {
+                            done();
+                        } else {
+                            done(new Error('Registro não atualizado'));
+                        }
+                    });
     });
 
     it('Deve retornar 400 quando a entrada for inválida', function(done) {
@@ -144,7 +156,7 @@ describe('GET /products', function() {
     });
 });
 
-describe.skip('DELETE /products', function() {
+describe('DELETE /products', function() {
     it('Deve retornar 200 e excluir o registro', function(done) {
         
         request(app).delete('/products/1')

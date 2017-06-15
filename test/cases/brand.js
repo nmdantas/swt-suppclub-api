@@ -83,7 +83,7 @@ describe('GET /brands', function() {
     });
 });
 
-describe('DELETE /brands', function() {
+describe.skip('DELETE /brands', function() {
     it('Deve retornar 200 e excluir o registro', function(done) {
         
         request(app).delete('/brands/1')
