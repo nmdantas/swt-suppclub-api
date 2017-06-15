@@ -72,10 +72,10 @@ var StoresProducts = sequelize.define('StoresProducts', {
 StoreSchema.belongsToMany(ProductSchema, { through: StoresProducts });
 ProductSchema.belongsToMany(StoreSchema, { through: StoresProducts });
 
-// Cria/Atualiza o banco de dados de acordo com os esquemas (Schema)
-sequelize.sync({
-     force: true
-});
+// Cria (sobrescreve caso já exista) o banco de dados de acordo com os esquemas (Schema)
+// sequelize.sync({
+//      force: true
+// });
 
 module.exports = {
     orm: sequelize,
