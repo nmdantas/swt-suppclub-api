@@ -26,7 +26,7 @@ module.exports = {
 };
 
 function preValidation(req, res, next) {
-    var constraints = framework.common.validation.requiredFor('name', 'brand', 'category');
+    var constraints = framework.common.validation.requiredFor('name', 'brandId', 'categoryId');
     var validationErrors = framework.common.validation.validate(req.body, constraints);
 
     if (validationErrors) {
@@ -44,27 +44,8 @@ function create(req, res, next) {
     accessLayer.orm.transaction(function(t) {
         return accessLayer.Product.create(req.body, { transaction: t }).then(function(product) {  
 
-            return product.setBrand(req.body.brand, { transaction: t }).then(function() {
-
-                return product.setCategory(req.body.category, { transaction: t }).then(function() {
-
-                    return product.addTags(req.body.tags, { transaction: t }).then(function() {
-                        var nutrients = req.body.nutrients || [];
-                        
-                        for (var i = 0; i < nutrients.length; i++) {
-                            nutrients[i].ProductId = product.id;
-                            nutrients[i].NutrientId = nutrients[i].id;
-                        }
-
-                        return accessLayer.ProductsNutrients.bulkCreate(nutrients).then(function(n) {
-                            responseBody = product;
-                        });
-
-                        // return product.addNutrients(keys, { associations, transaction: t }).then(function() {
-                        //     responseBody = product;
-                        // });
-                    })
-                });
+            return product.setTags(req.body.tags, { transaction: t }).then(function(tags) {
+                responseBody = product;
             });
         });
     }).then(function(result) {
@@ -78,18 +59,28 @@ function create(req, res, next) {
 
 function update(req, res, next) {
     var id = req.params.id;
-    
-    accessLayer.Product.update(req.body, { where: { id: id, deletedAt: null } }).then(function(result) {
-        if (result[0]) {
-            res.end();
-        } else {
-            var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
+    var productUpToDate = {};
 
-            next(customError);
-        }
+    accessLayer.orm.transaction(function(t) {
+        return accessLayer.Product.update(req.body, { 
+            transaction: t,  
+            where: { 
+                id: id, 
+                deletedAt: null 
+            }
+        }).then(function() {
+            return accessLayer.Product.findById(id, { transaction: t }).then(function(product) {
+
+                return product.setTags(req.body.tags, { transaction: t }).then(function(tags) {
+                    productUpToDate = product;
+                });
+            });
+        });
+    }).then(function(result) {
+        res.json(productUpToDate);
     }, function(error) {
         var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
-
+        
         next(customError);
     });
 }

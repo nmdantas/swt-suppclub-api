@@ -54,7 +54,7 @@ before('Sync test database', function(done) {
 // require('./cases/category')(app);
 // // Tags
 // require('./cases/tag')(app);
-// // Produtos
-// require('./cases/product')(app);
+// Produtos
+require('./cases/product')(app);
 // Objetivos
-require('./cases/objective')(app);
+//require('./cases/objective')(app);

@@ -12,7 +12,8 @@ module.exports = function(sequelize, DataType) {
         name: { type: DataType.STRING, allowNull: false },
         description: { type: DataType.STRING, allowNull: true },
         contraindication: { type: DataType.STRING, allowNull: true },
-        status: { type: DataType.ENUM, values: ['Available', 'Pending', 'Sold'] }
+        status: { type: DataType.ENUM, values: ['Available', 'Pending', 'Sold'] },
+        ean: { type: DataType.STRING, allowNull: true }
     }, {
         paranoid: true,
         underscored: false
