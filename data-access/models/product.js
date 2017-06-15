@@ -9,7 +9,7 @@
 
 module.exports = function(sequelize, DataType) {
     return sequelize.define('Product', {
-        name: { type: DataType.STRING, allowNull: false },
+        name: { type: DataType.STRING, allowNull: false, unique: true },
         description: { type: DataType.STRING, allowNull: true },
         contraindication: { type: DataType.STRING, allowNull: true },
         status: { type: DataType.ENUM, values: ['Available', 'Pending', 'Sold'] },

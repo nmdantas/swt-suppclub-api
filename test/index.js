@@ -32,6 +32,7 @@ app.use(controllers.category);
 app.use(controllers.tag);
 app.use(controllers.product);
 app.use(controllers.objective);
+app.use(controllers.store);
 
 app.use(framework.logger.middleware);
 
@@ -54,7 +55,9 @@ before('Sync test database', function(done) {
 // require('./cases/category')(app);
 // // Tags
 // require('./cases/tag')(app);
-// Produtos
-require('./cases/product')(app);
-// Objetivos
-//require('./cases/objective')(app);
+// // Produtos
+// require('./cases/product')(app);
+// // Objetivos
+// require('./cases/objective')(app);
+// Lojas
+require('./cases/store')(app);

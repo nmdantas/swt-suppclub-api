@@ -13,6 +13,7 @@ var nutrient  = require('./nutrient');
 var product   = require('./product');
 var tag       = require('./tag');
 var objective = require('./objective');
+var store     = require('./store');
 
 module.exports = {
     brand: brand,
@@ -20,5 +21,6 @@ module.exports = {
     nutrient: nutrient,
     product: product,
     tag: tag,
-    objective: objective
+    objective: objective,
+    store: store
 }

@@ -31,6 +31,7 @@ var sequelize = new Sequelize(process.env.DB_BASE, process.env.DB_USER, process.
 var NutrientSchema = sequelize.import('./models/nutrient');
 var BrandSchema = sequelize.import('./models/brand');
 var StoreSchema = sequelize.import('./models/store');
+var StoresUsersSchema = sequelize.import('./models/storesUsers')
 var PostSchema = sequelize.import('./models/post');
 var TagSchema = sequelize.import('./models/tag');
 var ObjectiveSchema = sequelize.import('./models/objective');
@@ -69,8 +70,8 @@ var StoresProducts = sequelize.define('StoresProducts', {
     price: Sequelize.DECIMAL(10, 2)
 }, { freezeTableName: true });
 
-StoreSchema.belongsToMany(ProductSchema, { through: StoresProducts });
-ProductSchema.belongsToMany(StoreSchema, { through: StoresProducts });
+StoreSchema.belongsToMany(ProductSchema, { through: StoresProducts, foreignKey: 'storeId', otherKey: 'productId' });
+ProductSchema.belongsToMany(StoreSchema, { through: StoresProducts, foreignKey: 'productId', otherKey: 'storeId' });
 
 // Cria (sobrescreve caso já exista) o banco de dados de acordo com os esquemas (Schema)
 // sequelize.sync({
@@ -82,6 +83,7 @@ module.exports = {
     Nutrient: NutrientSchema,
     Brand: BrandSchema,
     Store: StoreSchema,
+    StoresUsers: StoresUsersSchema,
     Post: PostSchema,
     Tag: TagSchema,
     Objective: ObjectiveSchema,
