@@ -42,7 +42,8 @@ function preValidation(req, res, next) {
 }
 
 function create(req, res, next) {
-    //var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var cache = global.CacheManager.get(authHeader.token);
     var responseBody = {};
 
     accessLayer.orm.transaction(function(t) {
@@ -51,7 +52,7 @@ function create(req, res, next) {
             return product.setTags(req.body.tags, { transaction: t }).then(function(tags) {
 
                 return accessLayer.ProductsStores.bulkCreate([{
-                    storeId: req.body.storeId,
+                    storeId: cache.stores[0].id,
                     productId: product.dataValues.id,
                     reference: req.body.reference,
                     stock: req.body.stock || 0,
@@ -72,6 +73,8 @@ function create(req, res, next) {
 
 function update(req, res, next) {
     var id = req.params.id;
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var cache = global.CacheManager.get(authHeader.token);
     var productUpToDate = {};
 
     accessLayer.orm.transaction(function(t) {
@@ -86,15 +89,18 @@ function update(req, res, next) {
 
                 return product.setTags(req.body.tags, { transaction: t }).then(function(tags) {
                     
-                    return accessLayer.ProductsStores.bulkCreate([{
-                        storeId: req.body.storeId,
-                        productId: id,
-                        reference: req.body.reference,
-                        stock: req.body.stock || 0,
-                        price: req.body.price || 0.0
-                    }], { transaction: t }).then(function(productsStores) {
-                        productUpToDate = product;
-                    });
+                    return accessLayer.ProductsStores.destroy({ where: { storeId: cache.stores[0].id, productId: id }}).then(function() {
+                        
+                        return accessLayer.ProductsStores.bulkCreate([{
+                            storeId: cache.stores[0].id,
+                            productId: id,
+                            reference: req.body.reference,
+                            stock: req.body.stock || 0,
+                            price: req.body.price || 0.0
+                        }], { transaction: t }).then(function(productsStores) {
+                            productUpToDate = product;
+                        });
+                    });                    
                 });
             });
         });
@@ -126,6 +132,8 @@ function destroy(req, res, next) {
 }
 
 function list(req, res, next) {
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var cache = global.CacheManager.get(authHeader.token);
     var id = req.params.id;
     var errorCallback = function(error) {
         var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
@@ -135,7 +143,7 @@ function list(req, res, next) {
 
     // Verifica se a seleção deve ser feita pelo id
     if (id) {
-        accessLayer.Product.findById(id, { include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient, accessLayer.Store ] }).then(function(result) {
+        accessLayer.Product.findById(id, { include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient, { model: accessLayer.Store, where: { id: cache.stores[0].id }} ] }).then(function(result) {
             if (result) {
                 res.json(result);
             } else {
@@ -145,7 +153,7 @@ function list(req, res, next) {
             }            
         }, errorCallback);
     } else {
-        accessLayer.Product.findAll({ include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient, accessLayer.Store ] }).then(function(results) {
+        accessLayer.Product.findAll({ include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient, { model: accessLayer.Store, where: { id: cache.stores[0].id }} ] }).then(function(results) {
             var products = [];
 
             for (var i = 0; i < results.length; i++) {
@@ -176,6 +184,5 @@ function uploadImage(req, res, next) {
 }
 
 function saveImage(req, res, next) {
-
     
 }

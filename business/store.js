@@ -56,6 +56,7 @@ function getById(req, res, next) {
 }
 
 function getByUser(req, res, next) {
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
     var id = req.params.id;
     
     accessLayer.StoresUsers.findAll({ 
@@ -82,7 +83,18 @@ function getByUser(req, res, next) {
                 stores.push(results[i].dataValues);
             }
 
-            res.json(stores);
+            if (stores.length > 0) {
+                var cache = global.CacheManager.get(authHeader.token);
+                cache.stores = stores;
+
+                global.CacheManager.set(authHeader.token, cache);
+
+                res.json(stores);
+            } else {
+                var error = new framework.models.SwtError({ httpCode: 403, message: 'Você não tem permissão para acessar esta aplicação :(' });
+
+                next(error);
+            }
         }, function(error) {
             errorCallback(error, next);
         });
