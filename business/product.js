@@ -135,7 +135,7 @@ function list(req, res, next) {
 
     // Verifica se a seleção deve ser feita pelo id
     if (id) {
-        accessLayer.Product.findById(id, { include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient ] }).then(function(result) {
+        accessLayer.Product.findById(id, { include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient, accessLayer.Store ] }).then(function(result) {
             if (result) {
                 res.json(result);
             } else {
@@ -145,7 +145,7 @@ function list(req, res, next) {
             }            
         }, errorCallback);
     } else {
-        accessLayer.Product.findAll({ include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient ] }).then(function(results) {
+        accessLayer.Product.findAll({ include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient, accessLayer.Store ] }).then(function(results) {
             var products = [];
 
             for (var i = 0; i < results.length; i++) {
