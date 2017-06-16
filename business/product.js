@@ -143,8 +143,25 @@ function list(req, res, next) {
 
     // Verifica se a seleção deve ser feita pelo id
     if (id) {
-        accessLayer.Product.findById(id, { include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient, { model: accessLayer.Store, where: { id: cache.stores[0].id }} ] }).then(function(result) {
+        accessLayer.Product.findById(id, { include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient, accessLayer.Store ] }).then(function(result) {
             if (result) {
+                var storeIndex = 0;
+                var belongsToStore = 0;
+
+                for (var i = 0; i < result.dataValues.Stores.length; i++) {
+                    var match = result.dataValues.Stores[i].id === cache.stores[0].id;
+
+                    if (match) {
+                        storeIndex = i;
+                    }
+
+                    belongsToStore |= match;
+                }
+
+                // Volta a variavel para o tipo boolean, pois quando
+                // o operador "|=" é usado o retorno é um inteiro
+                result.dataValues.belongsToStore = belongsToStore ? true : false;
+                result.dataValues.storeIndex = storeIndex;
                 res.json(result);
             } else {
                 var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
@@ -153,10 +170,27 @@ function list(req, res, next) {
             }            
         }, errorCallback);
     } else {
-        accessLayer.Product.findAll({ include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient, { model: accessLayer.Store, where: { id: cache.stores[0].id }} ] }).then(function(results) {
+        accessLayer.Product.findAll({ include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient, accessLayer.Store ] }).then(function(results) {
             var products = [];
 
             for (var i = 0; i < results.length; i++) {
+                var storeIndex = 0;
+                var belongsToStore = 0;
+
+                for (var j = 0; j < results[i].dataValues.Stores.length; j++) {
+                    var match = results[i].dataValues.Stores[j].id === cache.stores[0].id;
+
+                    if (match) {
+                        storeIndex = j;
+                    }
+
+                    belongsToStore |= match;
+                }
+
+                // Volta a variavel para o tipo boolean, pois quando
+                // o operador "|=" é usado o retorno é um inteiro
+                results[i].dataValues.belongsToStore = belongsToStore ? true : false;
+                results[i].dataValues.storeIndex = storeIndex;
                 products.push(results[i].dataValues);
             }
 
