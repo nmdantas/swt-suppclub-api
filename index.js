@@ -11,7 +11,7 @@
 require('dotenv').config();
 
 var PORT = process.env.PORT || 1337;
-var API_PREFIX = '/api/v0';
+var API_PREFIX = '/api/v1';
 
 var express     = require('express');
 var bodyParser  = require('body-parser');
