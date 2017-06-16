@@ -53,6 +53,8 @@ app.use(API_PREFIX, controllers.tag);
 app.use(API_PREFIX, controllers.product);
 // Objetivos
 app.use(API_PREFIX, controllers.objective);
+// Lojas
+app.use(API_PREFIX, controllers.store);
 
 // Middleware de erro
 app.use(framework.logger.middleware);
