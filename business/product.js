@@ -12,7 +12,11 @@ var framework   = require('swt-framework');
 var logManager  = framework.logger;
 
 module.exports = {
-    list: list,
+    get: {
+        all: getAll,
+        byId: getById,
+        byReference: getByReference
+    },
     create:[
         preValidation,
         create
@@ -22,11 +26,45 @@ module.exports = {
         update
     ],
     delete: destroy,
+    deleteRelationship: destroyRelationship,
     uploadImage: [ 
         uploadImage,
         saveImage
     ]
 };
+
+function handleResponse(results, cache) {
+    var products = [];
+
+    for (var i = 0; i < results.length; i++) {
+        var storeIndex = 0;
+        var belongsToStore = 0;
+
+        for (var j = 0; j < results[i].dataValues.Stores.length; j++) {
+            var match = results[i].dataValues.Stores[j].id === cache.stores[0].id;
+
+            if (match) {
+                storeIndex = j;
+            }
+
+            belongsToStore |= match;
+        }
+
+        // Volta a variavel para o tipo boolean, pois quando
+        // o operador "|=" é usado o retorno é um inteiro
+        results[i].dataValues.belongsToStore = belongsToStore ? true : false;
+        results[i].dataValues.storeIndex = storeIndex;
+        products.push(results[i].dataValues);
+    }
+
+    return products;
+}
+
+function errorCallback(error, next) {
+    var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
+
+    next(customError);
+}
 
 function preValidation(req, res, next) {
     var constraints = framework.common.validation.requiredFor('name', 'brandId', 'categoryId');
@@ -131,72 +169,120 @@ function destroy(req, res, next) {
     });
 }
 
-function list(req, res, next) {
+function destroyRelationship(req, res, next) {
     var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
     var cache = global.CacheManager.get(authHeader.token);
     var id = req.params.id;
-    var errorCallback = function(error) {
+
+    accessLayer.ProductsStores.destroy({ 
+        where: { 
+            productId: id,
+            storeId: cache.stores[0].id
+        } 
+    }).then(function(result) {
+        if (result) {
+            res.end();
+        } else {
+            var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
+
+            next(customError);
+        }
+    }, function(error) {
         var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
 
         next(customError);
-    };
+    });
+}
 
-    // Verifica se a seleção deve ser feita pelo id
-    if (id) {
-        accessLayer.Product.findById(id, { include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient, accessLayer.Store ] }).then(function(result) {
-            if (result) {
-                var storeIndex = 0;
-                var belongsToStore = 0;
+function getAll(req, res, next) {
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var cache = global.CacheManager.get(authHeader.token);
 
-                for (var i = 0; i < result.dataValues.Stores.length; i++) {
-                    var match = result.dataValues.Stores[i].id === cache.stores[0].id;
+    accessLayer.Product.findAll({ 
+        include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient, accessLayer.Store ],
+        where: req.query
+    }).then(function(results) {        
+        var products = handleResponse(results, cache);
 
-                    if (match) {
-                        storeIndex = i;
-                    }
+        res.json(products);
+    }, function(error) {
+        errorCallback(error, next);
+    });
+}
 
-                    belongsToStore |= match;
+function getById(req, res, next) {
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var cache = global.CacheManager.get(authHeader.token);
+    var id = req.params.id;
+
+    accessLayer.Product.findById(id, { include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient, accessLayer.Store ] }).then(function(result) {
+        if (result) {
+            var storeIndex = 0;
+            var belongsToStore = 0;
+
+            for (var i = 0; i < result.dataValues.Stores.length; i++) {
+                var match = result.dataValues.Stores[i].id === cache.stores[0].id;
+
+                if (match) {
+                    storeIndex = i;
                 }
 
-                // Volta a variavel para o tipo boolean, pois quando
-                // o operador "|=" é usado o retorno é um inteiro
-                result.dataValues.belongsToStore = belongsToStore ? true : false;
-                result.dataValues.storeIndex = storeIndex;
-                res.json(result);
-            } else {
-                var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
-
-                next(customError);
-            }            
-        }, errorCallback);
-    } else {
-        accessLayer.Product.findAll({ include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient, accessLayer.Store ] }).then(function(results) {
-            var products = [];
-
-            for (var i = 0; i < results.length; i++) {
-                var storeIndex = 0;
-                var belongsToStore = 0;
-
-                for (var j = 0; j < results[i].dataValues.Stores.length; j++) {
-                    var match = results[i].dataValues.Stores[j].id === cache.stores[0].id;
-
-                    if (match) {
-                        storeIndex = j;
-                    }
-
-                    belongsToStore |= match;
-                }
-
-                // Volta a variavel para o tipo boolean, pois quando
-                // o operador "|=" é usado o retorno é um inteiro
-                results[i].dataValues.belongsToStore = belongsToStore ? true : false;
-                results[i].dataValues.storeIndex = storeIndex;
-                products.push(results[i].dataValues);
+                belongsToStore |= match;
             }
 
+            // Volta a variavel para o tipo boolean, pois quando
+            // o operador "|=" é usado o retorno é um inteiro
+            result.dataValues.belongsToStore = belongsToStore ? true : false;
+            result.dataValues.storeIndex = storeIndex;
+            res.json(result);
+        } else {
+            var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
+
+            next(customError);
+        }            
+    }, function(error) {
+        errorCallback(error, next);
+    });
+}
+
+function getByReference(req, res, next) {
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var cache = global.CacheManager.get(authHeader.token);
+    var code = req.params.code;
+
+    accessLayer.ProductsStores.findAll({ 
+        attributes: ['productId'],
+        where: {
+            storeId: cache.stores[0].id,
+            reference: {
+                $like: '%' + code + '%'
+            }
+        }
+    }).then(function(productsStores) {
+        var ids = [];
+
+        for (var i = 0; i < productsStores.length; i++) {
+            ids.push(productsStores[i].dataValues.productId);
+        }
+        
+        // adiciona os ids relacionados à referencia no where junto com os demais filtros
+        req.query.id = {
+            $in: ids
+        };
+        
+        accessLayer.Product.findAll({
+            include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient, accessLayer.Store ],
+            where: req.query
+        }).then(function(results) {
+            var products = handleResponse(results, cache);
+
             res.json(products);
-        }, errorCallback);
-    }
+        }, function(error) {
+            errorCallback(error, next);
+        });
+    }, function(error) {
+        errorCallback(error, next);
+    });
 }
 
 function uploadImage(req, res, next) {
