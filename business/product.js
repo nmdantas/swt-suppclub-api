@@ -197,14 +197,26 @@ function destroyRelationship(req, res, next) {
 function getAll(req, res, next) {
     var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
     var cache = global.CacheManager.get(authHeader.token);
+    var offset = req.body.start || 0;
+    var limit = req.body.length || 10;
+    var draw = req.body.draw || 0;
 
-    accessLayer.Product.findAll({ 
-        include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient, accessLayer.Store ],
-        where: req.query
-    }).then(function(results) {        
-        var products = handleResponse(results, cache);
+    accessLayer.Product.findAndCountAll({ 
+        include: [ { model: accessLayer.Brand, require: true }, { model: accessLayer.Category, require: true }, { model: accessLayer.Tag, require: false }, { model: accessLayer.Nutrient, require: false }, { model: accessLayer.Store, require: false } ],
+        where: req.query,
+        offset: offset,
+        limit: limit
+    }).then(function(result) {        
+        var products = handleResponse(result.rows, cache);
 
-        res.json(products);
+        var returnedData = {
+            draw: draw,
+            recordsTotal: result.count,
+            recordsFiltered: result.count,
+            data: products
+        }
+
+        res.json(returnedData);
     }, function(error) {
         errorCallback(error, next);
     });
@@ -249,6 +261,9 @@ function getByReference(req, res, next) {
     var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
     var cache = global.CacheManager.get(authHeader.token);
     var code = req.params.code;
+    var offset = req.body.start || 0;
+    var limit = req.body.length || 10;
+    var draw = req.body.draw || 0;
 
     accessLayer.ProductsStores.findAll({ 
         attributes: ['productId'],
@@ -270,13 +285,22 @@ function getByReference(req, res, next) {
             $in: ids
         };
         
-        accessLayer.Product.findAll({
-            include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient, accessLayer.Store ],
-            where: req.query
-        }).then(function(results) {
-            var products = handleResponse(results, cache);
+        accessLayer.Product.findAndCountAll({
+            include: [ { model: accessLayer.Brand, require: true }, { model: accessLayer.Category, require: true }, { model: accessLayer.Tag, require: false }, { model: accessLayer.Nutrient, require: false }, { model: accessLayer.Store, require: false } ],
+            where: req.query,
+            offset: offset,
+            limit: limit
+        }).then(function(result) {
+            var products = handleResponse(result.rows, cache);
 
-            res.json(products);
+            var returnedData = {
+                draw: draw,
+                recordsTotal: result.count,
+                recordsFiltered: result.count,
+                data: products
+            }
+
+            res.json(returnedData);
         }, function(error) {
             errorCallback(error, next);
         });
