@@ -37,6 +37,7 @@ var TagSchema = sequelize.import('./models/tag');
 var ObjectiveSchema = sequelize.import('./models/objective');
 var CategorySchema = sequelize.import('./models/category');
 var ProductSchema = sequelize.import('./models/product');
+var ProductImageSchema = sequelize.import('./models/productImage');
 
 // Associação Objetivo x Tag
 var ObjectivesTags = sequelize.define('ObjectivesTags', {}, { freezeTableName: true });
@@ -73,8 +74,10 @@ var ProductsStores = sequelize.define('ProductsStores', {
 StoreSchema.belongsToMany(ProductSchema, { through: ProductsStores, foreignKey: 'storeId', otherKey: 'productId' });
 ProductSchema.belongsToMany(StoreSchema, { through: ProductsStores, foreignKey: 'productId', otherKey: 'storeId' });
 
+ProductSchema.hasMany( ProductImageSchema, { as: 'images' } );
+
 // Cria (sobrescreve caso já exista) o banco de dados de acordo com os esquemas (Schema)
-// sequelize.sync({
+//sequelize.sync({
 //      force: true
 // });
 
@@ -91,5 +94,6 @@ module.exports = {
     Product: ProductSchema,
     ProductsStores: ProductsStores,
     ProductsNutrients: ProductsNutrients,
-    ObjectivesTags: ObjectivesTags
+    ObjectivesTags: ObjectivesTags,
+    ProductImage: ProductImageSchema
 };

@@ -29,7 +29,7 @@ module.exports = {
     deleteRelationship: destroyRelationship,
     uploadImage: [ 
         uploadImage,
-        saveImage
+        saveProductImage
     ]
 };
 
@@ -316,7 +316,7 @@ function uploadImage(req, res, next) {
     framework.media.image.upload(image)
         .then(function (result) {
             console.log('** file uploaded to Cloudinary service');
-
+            result.productId = req.body.productId;
             res.json(result);
             
             next();
@@ -327,6 +327,19 @@ function uploadImage(req, res, next) {
         });
 }
 
-function saveImage(req, res, next) {
-    
+function saveProductImage(req, res, next) {
+
+    accessLayer.ProductImage.create({
+        public_id: res.public_id,
+        phash: res.phash,
+        secure_url: res.secure_url,
+        url: res.url,
+        ProductId: res.productId
+    }).then(function(result) {
+        res.json(result);
+    }, function(error) {
+        var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
+
+        next(customError);
+    });
 }
