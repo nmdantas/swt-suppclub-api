@@ -64,6 +64,20 @@ function handleResponse(results, cache) {
     return products;
 }
 
+function getOrderBy(body) {
+    var order = [];
+
+    for (var i = 0; i < body.order.length; i++) {
+        var index = body.order[i].column;
+        var direction = body.order[i].dir
+        var columnName = body.columns[index].data;
+        
+        order.push([columnName, direction]);
+    }
+
+    return order;
+}
+
 function errorCallback(error, next) {
     var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
 
@@ -204,16 +218,8 @@ function getAll(req, res, next) {
     var offset = req.body.start || 0;
     var limit = req.body.length || 10;
     var draw = req.body.draw || 0;
-    var order = [];
+    var order = getOrderBy(req.body);
     
-    for (var i = 0; i < req.body.order.length; i++) {
-        var index = req.body.order[i].column;
-        var direction = req.body.order[i].dir
-        var columnName = req.body.columns[index].data;
-        
-        order.push([columnName, direction]);
-    }
-
     accessLayer.Product.findAndCountAll({ 
         include: [ { model: accessLayer.Brand, require: true }, { model: accessLayer.Category, require: true }, { model: accessLayer.Tag, require: false }, { model: accessLayer.Nutrient, require: false }, { model: accessLayer.Store, require: false } ],
         where: req.query,
@@ -278,6 +284,7 @@ function getByReference(req, res, next) {
     var offset = req.body.start || 0;
     var limit = req.body.length || 10;
     var draw = req.body.draw || 0;
+    var order = getOrderBy(req.body);
 
     accessLayer.ProductsStores.findAll({ 
         attributes: ['productId'],
@@ -303,7 +310,8 @@ function getByReference(req, res, next) {
             include: [ { model: accessLayer.Brand, require: true }, { model: accessLayer.Category, require: true }, { model: accessLayer.Tag, require: false }, { model: accessLayer.Nutrient, require: false }, { model: accessLayer.Store, require: false } ],
             where: req.query,
             offset: offset,
-            limit: limit
+            limit: limit,
+            order: order
         }).then(function(result) {
             var products = handleResponse(result.rows, cache);
 
