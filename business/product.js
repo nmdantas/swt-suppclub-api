@@ -30,6 +30,10 @@ module.exports = {
     uploadImage: [ 
         uploadImage,
         saveProductImage
+    ],
+    deleteImage: [ 
+        deleteImage,
+        destroyProductImage
     ]
 };
 
@@ -227,7 +231,7 @@ function getById(req, res, next) {
     var cache = global.CacheManager.get(authHeader.token);
     var id = req.params.id;
 
-    accessLayer.Product.findById(id, { include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient, accessLayer.Store ] }).then(function(result) {
+    accessLayer.Product.findById(id, { include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient, accessLayer.Store, { model: accessLayer.ProductImage, as: 'images'} ] }).then(function(result) {
         if (result) {
             var storeIndex = 0;
             var belongsToStore = 0;
@@ -316,8 +320,7 @@ function uploadImage(req, res, next) {
     framework.media.image.upload(image)
         .then(function (result) {
             console.log('** file uploaded to Cloudinary service');
-            result.productId = req.body.productId;
-            res.json(result);
+            req.cloudionary = result;
             
             next();
         }, function(error) {
@@ -330,13 +333,58 @@ function uploadImage(req, res, next) {
 function saveProductImage(req, res, next) {
 
     accessLayer.ProductImage.create({
-        public_id: res.public_id,
-        phash: res.phash,
-        secure_url: res.secure_url,
-        url: res.url,
-        ProductId: res.productId
+        public_id: req.cloudionary.public_id,
+        phash: req.cloudionary.phash,
+        secure_url: req.cloudionary.secure_url,
+        url: req.cloudionary.url,
+        ProductId: req.body.productId
     }).then(function(result) {
         res.json(result);
+    }, function(error) {
+        var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
+
+        next(customError);
+    });
+}
+
+function deleteImage(req, res, next) {
+
+    var id = req.params.id;
+
+    accessLayer.ProductImage.findById(id).then(function(result) {
+        if (result) {
+            req.image = result;
+            framework.media.image.remove(result.public_id)
+                .then(function (result) {
+                    console.log('** file removed from Cloudinary service');
+                    req.cloudionary = result;
+                    
+                    next();
+                }, function(error) {
+                    var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
+
+                    next(customError);
+                });
+
+        } else {
+            var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
+
+            next(customError);
+        }            
+    }, errorCallback);
+}
+
+function destroyProductImage(req, res, next) {
+    var id = req.image.id;
+
+    accessLayer.ProductImage.destroy({ where: { id: id } }).then(function(result) {
+        if (result) {
+            res.end();
+        } else {
+            var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
+
+            next(customError);
+        }
     }, function(error) {
         var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
 
