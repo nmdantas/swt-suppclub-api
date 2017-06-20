@@ -355,7 +355,7 @@ function saveProductImage(req, res, next) {
         phash: req.cloudionary.phash,
         secure_url: req.cloudionary.secure_url,
         url: req.cloudionary.url,
-        ProductId: req.body.productId
+        productId: req.body.productId
     }).then(function(result) {
         res.json(result);
     }, function(error) {

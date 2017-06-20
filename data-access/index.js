@@ -74,12 +74,13 @@ var ProductsStores = sequelize.define('ProductsStores', {
 StoreSchema.belongsToMany(ProductSchema, { through: ProductsStores, foreignKey: 'storeId', otherKey: 'productId' });
 ProductSchema.belongsToMany(StoreSchema, { through: ProductsStores, foreignKey: 'productId', otherKey: 'storeId' });
 
-ProductSchema.hasMany( ProductImageSchema, { as: 'images'} );
+ProductSchema.hasMany( ProductImageSchema, { as: 'images', foreignKey: 'productId'} );
+ProductImageSchema.belongsTo(ProductSchema, {foreignKey: 'productId'});
 
 // Cria (sobrescreve caso já exista) o banco de dados de acordo com os esquemas (Schema)
 //sequelize.sync({
-//      force: true
-// });
+//    force: true
+//});
 
 module.exports = {
     orm: sequelize,
