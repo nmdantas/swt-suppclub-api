@@ -12,7 +12,8 @@ module.exports = function(sequelize, DataType) {
         public_id: { type: DataType.STRING, allowNull: false },
         phash: { type: DataType.STRING, allowNull: true },
         secure_url: { type: DataType.STRING, allowNull: true },
-        url: { type: DataType.STRING, allowNull: false }
+        url: { type: DataType.STRING, allowNull: false },
+        imageType: { type: DataType.INTEGER, allowNull: false }
     }, {
         paranoid: true,
         underscored: false

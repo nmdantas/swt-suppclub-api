@@ -34,6 +34,10 @@ module.exports = {
     deleteImage: [ 
         deleteImage,
         destroyProductImage
+    ],
+    findByImage: [
+        getPhash,
+        findByImage
     ]
 };
 
@@ -355,7 +359,8 @@ function saveProductImage(req, res, next) {
         phash: req.cloudionary.phash,
         secure_url: req.cloudionary.secure_url,
         url: req.cloudionary.url,
-        productId: req.body.productId
+        productId: req.body.productId,
+        imageType: req.body.imageType
     }).then(function(result) {
         res.json(result);
     }, function(error) {
@@ -407,5 +412,47 @@ function destroyProductImage(req, res, next) {
         var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
 
         next(customError);
+    });
+}
+
+function getPhash(req, res, next) {
+
+    framework.media.image.pHash(req.body.image, function(result) {
+        console.log('** pHash: ' + result);
+        
+        if (result) {
+            req.pHash = result;
+            next();
+        } else {
+            var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
+
+            next(customError);
+        }
+    });
+}
+
+function findByImage(req, res, next) {
+
+    accessLayer.Product.findAndCountAll({
+        include: [ { model: accessLayer.Brand, require: true }, { model: accessLayer.Category, require: true }, { model: accessLayer.Tag, require: false }, { model: accessLayer.Nutrient, require: false }, { model: accessLayer.Store, require: false } ],
+        where: [
+            sequelize.literal('(1 - (BIT_COUNT( CAST(CONV(a.phash, 16, 10) AS UNSIGNED) ^ CAST(CONV(' + req.pHash + ', 16, 10) AS UNSIGNED) ) / 64.0)) > 0.7')
+        ],
+        offset: offset,
+        limit: limit,
+        order: order
+    }).then(function(result) {
+        var products = handleResponse(result.rows, cache);
+
+        var returnedData = {
+            draw: draw,
+            recordsTotal: result.count,
+            recordsFiltered: result.count,
+            data: products
+        }
+
+        res.json(returnedData);
+    }, function(error) {
+        errorCallback(error, next);
     });
 }

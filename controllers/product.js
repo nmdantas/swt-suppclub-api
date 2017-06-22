@@ -22,5 +22,6 @@ router.delete('/products/:id/relationship', business.deleteRelationship);
 
 router.post('/products/image', business.uploadImage);
 router.delete('/products/image/:id', business.deleteImage);
+router.post('/products/image/find', business.findByImage);
 
 module.exports = router;
