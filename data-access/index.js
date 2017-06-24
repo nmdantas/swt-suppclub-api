@@ -56,8 +56,12 @@ var ProductsNutrients = sequelize.define('ProductsNutrients', {
     portion: Sequelize.STRING
 }, { freezeTableName: true });
 
+BrandSchema.hasMany( ProductSchema, { as: 'products', foreignKey: 'brandId'} );
 ProductSchema.belongsTo(BrandSchema, { foreignKey: 'brandId' });
+
+CategorySchema.hasMany( ProductSchema, { as: 'products', foreignKey: 'categoryId'} );
 ProductSchema.belongsTo(CategorySchema, { foreignKey: 'categoryId' });
+
 ProductSchema.belongsToMany(TagSchema, { through: ProductsTags, foreignKey: 'productId', otherKey: 'tagId' });
 ProductSchema.belongsToMany(NutrientSchema, { through: ProductsNutrients, foreignKey: 'productId', otherKey: 'nutrientId' });
 
