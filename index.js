@@ -22,7 +22,7 @@ var controllers = require('./controllers');
 
 var app = express();
 
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '10mb' }));
 app.use(compression());
 
 // Rota default
