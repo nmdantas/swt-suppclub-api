@@ -70,6 +70,7 @@ function handleResponse(results, cache) {
 
 function getOrderBy(body) {
     var order = [];
+    body.order = body.order || [];
 
     for (var i = 0; i < body.order.length; i++) {
         var index = body.order[i].column;
@@ -225,7 +226,14 @@ function getAll(req, res, next) {
     var order = getOrderBy(req.body);
     
     accessLayer.Product.findAndCountAll({ 
-        include: [ { model: accessLayer.Brand, require: true }, { model: accessLayer.Category, require: true }, { model: accessLayer.Tag, require: false }, { model: accessLayer.Nutrient, require: false }, { model: accessLayer.Store, require: false } ],
+        include: [ 
+            { model: accessLayer.Brand, require: true }, 
+            { model: accessLayer.Category, require: true }, 
+            { model: accessLayer.Tag, require: false }, 
+            { model: accessLayer.Nutrient, require: false }, 
+            { model: accessLayer.Store, require: false },
+            { model: accessLayer.ProductImage, as: 'images'}
+        ],
         where: req.query,
         offset: offset,
         limit: limit,
@@ -251,7 +259,16 @@ function getById(req, res, next) {
     var cache = global.CacheManager.get(authHeader.token);
     var id = req.params.id;
 
-    accessLayer.Product.findById(id, { include: [ accessLayer.Brand, accessLayer.Category, accessLayer.Tag, accessLayer.Nutrient, accessLayer.Store, { model: accessLayer.ProductImage, as: 'images'} ] }).then(function(result) {
+    accessLayer.Product.findById(id, { 
+        include: [ 
+            accessLayer.Brand, 
+            accessLayer.Category, 
+            accessLayer.Tag, 
+            accessLayer.Nutrient, 
+            accessLayer.Store, 
+            { model: accessLayer.ProductImage, as: 'images'}
+        ]
+    }).then(function(result) {
         if (result) {
             var storeIndex = 0;
             var belongsToStore = 0;
@@ -289,6 +306,10 @@ function getByReference(req, res, next) {
     var limit = req.body.length || 10;
     var draw = req.body.draw || 0;
     var order = getOrderBy(req.body);
+    
+    if (order.length == 0) {
+        order.push(['name','asc']);
+    }
 
     accessLayer.ProductsStores.findAll({ 
         attributes: ['productId'],
@@ -300,19 +321,27 @@ function getByReference(req, res, next) {
         }
     }).then(function(productsStores) {
         var ids = [];
+        var query = req.query || {};
 
         for (var i = 0; i < productsStores.length; i++) {
             ids.push(productsStores[i].dataValues.productId);
         }
         
         // adiciona os ids relacionados à referencia no where junto com os demais filtros
-        req.query.id = {
+        query.id = {
             $in: ids
         };
         
         accessLayer.Product.findAndCountAll({
-            include: [ { model: accessLayer.Brand, require: true }, { model: accessLayer.Category, require: true }, { model: accessLayer.Tag, require: false }, { model: accessLayer.Nutrient, require: false }, { model: accessLayer.Store, require: false } ],
-            where: req.query,
+            include: [ 
+                { model: accessLayer.Brand, require: true }, 
+                { model: accessLayer.Category, require: true }, 
+                { model: accessLayer.Tag, require: false }, 
+                { model: accessLayer.Nutrient, require: false }, 
+                { model: accessLayer.Store, require: false },
+                { model: accessLayer.ProductImage, as: 'images'}
+            ],
+            where: query,
             offset: offset,
             limit: limit,
             order: order
@@ -433,25 +462,62 @@ function getPhash(req, res, next) {
 
 function findByImage(req, res, next) {
 
-    accessLayer.Product.findAndCountAll({
-        include: [ { model: accessLayer.Brand, require: true }, { model: accessLayer.Category, require: true }, { model: accessLayer.Tag, require: false }, { model: accessLayer.Nutrient, require: false }, { model: accessLayer.Store, require: false } ],
-        where: [
-            sequelize.literal('(1 - (BIT_COUNT( CAST(CONV(a.phash, 16, 10) AS UNSIGNED) ^ CAST(CONV(' + req.pHash + ', 16, 10) AS UNSIGNED) ) / 64.0)) > 0.7')
-        ],
-        offset: offset,
-        limit: limit,
-        order: order
-    }).then(function(result) {
-        var products = handleResponse(result.rows, cache);
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var cache = global.CacheManager.get(authHeader.token);
+    var offset = 0;
+    var limit = 10;
+    var draw = 0;
+    var order = [];
+    order.push(['name','asc']);
 
-        var returnedData = {
-            draw: draw,
-            recordsTotal: result.count,
-            recordsFiltered: result.count,
-            data: products
+    var query = "SELECT p.* " +  
+                "FROM products as p " +
+                "INNER JOIN productimages as pf on p.id = pf.productId " +
+                "WHERE (1 - (BIT_COUNT( CAST(CONV(pf.phash, 16, 10) AS UNSIGNED) ^ CAST(CONV('" + req.pHash + "', 16, 10) AS UNSIGNED) ) / 64.0)) > 0.7 " +
+                "AND pf.deletedAt IS NULL";
+
+    accessLayer.orm.query(query, { model: accessLayer.Product }).then(function(productsImages) {
+        
+        var ids = [];
+        var query = {};
+
+        for (var i = 0; i < productsImages.length; i++) {
+            ids.push(productsImages[i].dataValues.id);
         }
+        
+        // adiciona os ids relacionados à referencia no where junto com os demais filtros
+        query.id = {
+            $in: ids
+        };
+        
+        accessLayer.Product.findAndCountAll({
+            include: [ 
+                { model: accessLayer.Brand, require: true }, 
+                { model: accessLayer.Category, require: true }, 
+                { model: accessLayer.Tag, require: false }, 
+                { model: accessLayer.Nutrient, require: false }, 
+                { model: accessLayer.Store, require: false },
+                { model: accessLayer.ProductImage, as: 'images'}
+            ],
+            where: query,
+            offset: offset,
+            limit: limit,
+            order: order
+        }).then(function(result) {
+            var products = handleResponse(result.rows, cache);
 
-        res.json(returnedData);
+            var returnedData = {
+                draw: draw,
+                recordsTotal: result.count,
+                recordsFiltered: result.count,
+                data: products
+            }
+
+            res.json(returnedData);
+        }, function(error) {
+            errorCallback(error, next);
+        });
+
     }, function(error) {
         errorCallback(error, next);
     });
