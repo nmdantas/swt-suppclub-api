@@ -69,29 +69,35 @@ function update(req, res, next) {
 function destroy(req, res, next) {
     var id = req.params.id;
 
-    accessLayer.Category.destroy({ where: { id: id } }).then(function(result) {
-        if (result) {
-            res.end();
+    accessLayer.Category.findById(id, { 
+        include: [{ 
+            model: accessLayer.Product, 
+            as: 'products' 
+        }] 
+    }).then(function(category) {
+        if (category && (!category.products || category.products.length == 0)) {
+            
+            category.destroy().then(function(result) {
+                if (result) {
+                    res.end();
+                } else {
+                    var customError = new framework.models.SwtError({ httpCode: 404, message: 'O Registro não pode ser excluído.' });
+
+                    next(customError);
+                }
+            }, errorCallback);
+            
         } else {
-            var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
+            var customError = new framework.models.SwtError({ httpCode: 404, code: 'SWT0099', message: (category ? 'O Registro não pode ser excluído.' : 'Registro não encontrado') });
 
             next(customError);
-        }
-    }, function(error) {
-        var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
-
-        next(customError);
-    });
+        }            
+    }, errorCallback);
 }
 
 function list(req, res, next) {
     var id = req.params.id;
-    var errorCallback = function(error) {
-        var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
-
-        next(customError);
-    };
-
+    
     // Verifica se a seleção deve ser feita pelo id
     if (id) {
         accessLayer.Category.findById(id).then(function(result) {
@@ -115,3 +121,9 @@ function list(req, res, next) {
         }, errorCallback);
     }
 }
+
+var errorCallback = function(error) {
+    var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
+
+    next(customError);
+};

@@ -15,4 +15,6 @@ router.get('/stores', business.get.all);
 router.get('/stores/:id', business.get.byId);
 router.get('/stores/user/:id', business.get.byUser);
 
+router.post('/stores/open', business.update.open);
+
 module.exports = router;

@@ -16,6 +16,9 @@ module.exports = {
         all: getAll,
         byId: getById,
         byUser: getByUser
+    },
+    update: {
+        open: updateOpen
     }
 };
 
@@ -98,6 +101,32 @@ function getByUser(req, res, next) {
         }, function(error) {
             errorCallback(error, next);
         });
+    }, function(error) {
+        errorCallback(error, next);
+    });
+}
+
+function updateOpen(req, res, next) {
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var cache = global.CacheManager.get(authHeader.token);
+
+    accessLayer.Store.findById(cache.stores[0].id).then(function(store) {
+        if (store) {
+            
+            store.updateAttributes({ open: req.body.open }).then(function(result) {
+
+                cache.stores[0].open = req.body.open;
+                res.json({ updated: result.open });
+
+            }, function(error) {
+                errorCallback(error, next);
+            });
+
+        } else {
+            var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
+
+            next(customError);
+        }            
     }, function(error) {
         errorCallback(error, next);
     });
