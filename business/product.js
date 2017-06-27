@@ -83,6 +83,20 @@ function getOrderBy(body) {
     return order;
 }
 
+function formatQuery(query) {
+    if (!query) {
+        return query;
+    }
+
+    for (var property in query) {
+        if (typeof query[property] === 'object') {
+            query[property].$like = '%' + query[property].$like + '%';
+        }
+    }
+
+    return query;
+}
+
 function errorCallback(error, next) {
     var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
 
@@ -234,7 +248,7 @@ function getAll(req, res, next) {
             { model: accessLayer.Store, require: false },
             { model: accessLayer.ProductImage, as: 'images'}
         ],
-        where: req.query,
+        where: formatQuery(req.query),
         offset: offset,
         limit: limit,
         order: order
@@ -341,7 +355,7 @@ function getByReference(req, res, next) {
                 { model: accessLayer.Store, require: false },
                 { model: accessLayer.ProductImage, as: 'images'}
             ],
-            where: query,
+            where: formatQuery(query),
             offset: offset,
             limit: limit,
             order: order
