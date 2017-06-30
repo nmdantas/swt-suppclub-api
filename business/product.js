@@ -23,7 +23,9 @@ module.exports = {
     ],
     update: [
         preValidation,
-        update
+        registerRequestUpdate,
+        updateStoreData,
+        updateBasicData
     ],
     delete: destroy,
     deleteRelationship: destroyRelationship,
@@ -146,46 +148,139 @@ function create(req, res, next) {
     });
 }
 
-function update(req, res, next) {
+function registerRequestUpdate(req, res, next) {
+    var id = req.params.id;
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var cache = global.CacheManager.get(authHeader.token);
+    var isAdmin = (cache.roles.indexOf('Admin') > -1 || cache.roles.indexOf('Lojista_Admin') > -1);
+
+    accessLayer.Product.findById(id, { 
+        include: [ 
+            accessLayer.Tag,
+            accessLayer.Store,
+        ]
+    }).then(function(result) {
+        if (result) {
+            
+            var original = result.dataValues;
+            req.body.changedBasic = changedBasicData(original,req.body);
+            req.body.changedStore = changedStoreData(original,req.body);
+            var approvaded = isAdmin || !req.body.changedStore;
+
+            if (!req.body.changedBasic && !req.body.changedStore) {
+                var customError = new framework.models.SwtError({ httpCode: 404, errorCode: 'SWT', message: 'Não foi encontrato alteração nos dados do produto' });
+            }
+
+            var productChange = {
+                original: JSON.stringify(original),
+                change: JSON.stringify(req.body),
+                userIdRequest: cache.user.id,
+                dateRequest: new Date(),
+                productId: req.body.id,
+                status: approvaded ? 2 : 1,
+                userIdApproval: approvaded ? cache.user.id : null,
+                dateApproval: approvaded ? new Date() : null
+            };
+
+            accessLayer.orm.transaction(function(t) {
+                return accessLayer.ProductChange.create(productChange, { transaction: t }).then(function(change) {  
+
+                    req.body.change = change;
+
+                    return accessLayer.ProductsChangesStoresRequest.bulkCreate([{
+                        storeId: cache.stores[0].id,
+                        productChangeId: change.dataValues.id
+
+                    }], { transaction: t }).then(function(changeRequest) {
+                        if(productChange.status == 2) {
+
+                            return accessLayer.ProductsChangesStoresApproval.bulkCreate([{
+                                storeId: cache.stores[0].id,
+                                productChangeId: change.dataValues.id
+                            }], { transaction: t });
+                        }
+                    }); 
+                });
+            }).then(function(result) {
+                next();
+            }, function(error) {
+                errorCallback(error, next);
+            });
+
+        } else {
+            var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
+            next(customError);
+        }            
+    }, function(error) {
+        errorCallback(error, next);
+    });
+}
+
+function updateBasicData(req, res, next) {
     var id = req.params.id;
     var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
     var cache = global.CacheManager.get(authHeader.token);
     var productUpToDate = {};
 
-    accessLayer.orm.transaction(function(t) {
-        return accessLayer.Product.update(req.body, { 
-            transaction: t,  
-            where: { 
-                id: id, 
-                deletedAt: null 
-            }
-        }).then(function() {
-            return accessLayer.Product.findById(id, { transaction: t }).then(function(product) {
+    if (req.body.changedBasic) {
 
-                return product.setTags(req.body.tags, { transaction: t }).then(function(tags) {
-                    
-                    return accessLayer.ProductsStores.destroy({ where: { storeId: cache.stores[0].id, productId: id }}).then(function() {
+        accessLayer.orm.transaction(function(t) {
+            return accessLayer.Product.update(req.body, { 
+                transaction: t,  
+                where: { 
+                    id: id, 
+                    deletedAt: null 
+                }
+            }).then(function() {
+                return accessLayer.Product.findById(id, { transaction: t }).then(function(product) {
+
+                    return product.setTags(req.body.tags, { transaction: t }).then(function(tags) {
                         
-                        return accessLayer.ProductsStores.bulkCreate([{
-                            storeId: cache.stores[0].id,
-                            productId: id,
-                            reference: req.body.reference,
-                            stock: req.body.stock || 0,
-                            price: req.body.price || 0.0
-                        }], { transaction: t }).then(function(productsStores) {
-                            productUpToDate = product;
-                        });
-                    });                    
+                        productUpToDate = product;                    
+                    });
                 });
             });
+        }).then(function(result) {
+            res.json(productUpToDate);
+        }, function(error) {
+            var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
+            
+            next(customError);
         });
-    }).then(function(result) {
-        res.json(productUpToDate);
-    }, function(error) {
-        var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
-        
-        next(customError);
-    });
+    } else {
+        res.json(req.body);   
+    }
+}
+
+function updateStoreData(req, res, next) {
+    var id = req.params.id;
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var cache = global.CacheManager.get(authHeader.token);
+    var productUpToDate = {};
+
+    if (req.body.changedStore) {
+
+        accessLayer.orm.transaction(function(t) {
+            return accessLayer.ProductsStores.destroy({ where: { storeId: cache.stores[0].id, productId: id }}).then(function() {
+                    
+                return accessLayer.ProductsStores.bulkCreate([{
+                    storeId: cache.stores[0].id,
+                    productId: id,
+                    reference: req.body.reference,
+                    stock: req.body.stock || 0,
+                    price: req.body.price || 0.0
+                }], { transaction: t });
+            });
+        }).then(function(result) {
+            next();
+        }, function(error) {
+            var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
+            
+            next(customError);
+        });
+    } else {
+        next();
+    }
 }
 
 function destroy(req, res, next) {
@@ -280,7 +375,15 @@ function getById(req, res, next) {
             accessLayer.Tag, 
             accessLayer.Nutrient, 
             accessLayer.Store, 
-            { model: accessLayer.ProductImage, as: 'images'}
+            { model: accessLayer.ProductImage, as: 'images'},
+            { 
+                model: accessLayer.ProductChange, 
+                as: 'changes', 
+                include: [ 
+                    { model: accessLayer.Store, as: 'storeRequest'},
+                    { model: accessLayer.Store, as: 'storeApproval'}
+                ]
+            }
         ]
     }).then(function(result) {
         if (result) {
@@ -535,4 +638,36 @@ function findByImage(req, res, next) {
     }, function(error) {
         errorCallback(error, next);
     });
+}
+
+function changedBasicData(original, updated) {
+    
+    var isEquals = (original.name             == updated.name             &&
+                    original.description      == updated.description      &&
+                    original.contraindication == updated.contraindication &&
+                    original.status           == updated.status           &&
+                    original.ean              == updated.ean              &&
+                    original.brandId          == updated.brandId          &&
+                    original.categoryId       == updated.categoryId       &&
+                    original.Tags.length      == updated.tags.length);
+
+    if (isEquals && original.Tags.length > 0 && updated.tags.length > 0) {
+        for (var i = 0; i < original.Tags.length; i++) {
+            if (updated.tags.indexOf(original.Tags[i].id) == -1 ) {
+                isEquals = false;
+            }
+        }
+    }
+
+    return !isEquals;
+}
+
+function changedStoreData(original, updated) {
+    
+    var isEquals = (original.Stores && 
+                    original.Stores.length > 0 &&
+                    original.Stores[0].ProductsStores.dataValues.reference == updated.reference &&
+                    original.Stores[0].ProductsStores.dataValues.price     == updated.price);
+
+    return !isEquals;
 }

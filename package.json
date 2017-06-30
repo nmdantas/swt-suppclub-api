@@ -21,6 +21,7 @@
     "body-parser": "^1.17.1",
     "compression": "^1.6.2",
     "express": "^4.15.2",
+    "lodash-node": "^3.10.2",
     "mysql": "^2.13.0",
     "sequelize": "^3.30.4",
     "swt-framework": "^0.1.x",

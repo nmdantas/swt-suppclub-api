@@ -12,7 +12,7 @@
  */
 var Sequelize = require('sequelize');
 var options = {
-    host: process.env.DB_HOST,
+    host: 'localhost', //process.env.DB_HOST,
     dialect: process.env.DB_DIALECT,
     pool: {
         min: 0,
@@ -38,6 +38,7 @@ var ObjectiveSchema = sequelize.import('./models/objective');
 var CategorySchema = sequelize.import('./models/category');
 var ProductSchema = sequelize.import('./models/product');
 var ProductImageSchema = sequelize.import('./models/productImage');
+var ProductChangeSchema = sequelize.import('./models/productChange');
 
 // Associação Objetivo x Tag
 var ObjectivesTags = sequelize.define('ObjectivesTags', {}, { freezeTableName: true });
@@ -51,6 +52,8 @@ CategorySchema.belongsTo(CategorySchema, { foreignKey: 'categoryId', as: 'parent
 
 // Associações de Produto
 var ProductsTags = sequelize.define('ProductsTags', {}, { freezeTableName: true });
+var ProductsChangesStoresRequest = sequelize.define('ProductsChangesStoresRequest', {}, { freezeTableName: true });
+var ProductsChangesStoresApproval = sequelize.define('ProductsChangesStoresApproval', {}, { freezeTableName: true });
 var ProductsNutrients = sequelize.define('ProductsNutrients', {
     value: Sequelize.STRING,
     portion: Sequelize.STRING
@@ -81,10 +84,19 @@ ProductSchema.belongsToMany(StoreSchema, { through: ProductsStores, foreignKey: 
 ProductSchema.hasMany( ProductImageSchema, { as: 'images', foreignKey: 'productId'} );
 ProductImageSchema.belongsTo(ProductSchema, {foreignKey: 'productId'});
 
+ProductSchema.hasMany( ProductChangeSchema, { as: 'changes', foreignKey: 'productId'} );
+ProductChangeSchema.belongsTo(ProductSchema, {foreignKey: 'productId'});
+
+ProductChangeSchema.belongsToMany(StoreSchema, { through: ProductsChangesStoresRequest, foreignKey: 'productChangeId', otherKey: 'storeId', as: 'storeRequest' });
+StoreSchema.belongsToMany(ProductChangeSchema, { through: ProductsChangesStoresRequest, foreignKey: 'storeId', otherKey: 'productChangeId' });
+
+ProductChangeSchema.belongsToMany(StoreSchema, { through: ProductsChangesStoresApproval, foreignKey: 'productChangeId', otherKey: 'storeId', as: 'storeApproval' });
+StoreSchema.belongsToMany(ProductChangeSchema, { through: ProductsChangesStoresApproval, foreignKey: 'storeId', otherKey: 'productChangeId' });
+
 // Cria (sobrescreve caso já exista) o banco de dados de acordo com os esquemas (Schema)
-//sequelize.sync({
-//    force: true
-//});
+sequelize.sync({
+    force: true
+});
 
 module.exports = {
     orm: sequelize,
@@ -100,5 +112,8 @@ module.exports = {
     ProductsStores: ProductsStores,
     ProductsNutrients: ProductsNutrients,
     ObjectivesTags: ObjectivesTags,
-    ProductImage: ProductImageSchema
+    ProductImage: ProductImageSchema,
+    ProductChange: ProductChangeSchema,
+    ProductsChangesStoresRequest: ProductsChangesStoresRequest,
+    ProductsChangesStoresApproval: ProductsChangesStoresApproval
 };
