@@ -12,7 +12,7 @@
  */
 var Sequelize = require('sequelize');
 var options = {
-    host: 'localhost', //process.env.DB_HOST,
+    host: process.env.DB_HOST,
     dialect: process.env.DB_DIALECT,
     pool: {
         min: 0,
@@ -94,9 +94,9 @@ ProductChangeSchema.belongsToMany(StoreSchema, { through: ProductsChangesStoresA
 StoreSchema.belongsToMany(ProductChangeSchema, { through: ProductsChangesStoresApproval, foreignKey: 'storeId', otherKey: 'productChangeId' });
 
 // Cria (sobrescreve caso já exista) o banco de dados de acordo com os esquemas (Schema)
-sequelize.sync({
-    force: true
-});
+//sequelize.sync({
+//    force: true
+//});
 
 module.exports = {
     orm: sequelize,
