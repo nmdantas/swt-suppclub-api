@@ -25,4 +25,7 @@ router.post('/products/image', business.uploadImage);
 router.delete('/products/image/:id', business.deleteImage);
 router.post('/products/image/find', business.findByImage);
 
+router.post('/products/approval', business.approval.all);
+router.put('/products/approval/:id', business.approval.update);
+
 module.exports = router;

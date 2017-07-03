@@ -40,34 +40,44 @@ module.exports = {
     findByImage: [
         getPhash,
         findByImage
-    ]
+    ],
+    approval:{
+        all: getAllApproval,
+        update: approveReject
+    }
 };
 
 function handleResponse(results, cache) {
     var products = [];
 
     for (var i = 0; i < results.length; i++) {
-        var storeIndex = 0;
-        var belongsToStore = 0;
-
-        for (var j = 0; j < results[i].dataValues.Stores.length; j++) {
-            var match = results[i].dataValues.Stores[j].id === cache.stores[0].id;
-
-            if (match) {
-                storeIndex = j;
-            }
-
-            belongsToStore |= match;
-        }
-
-        // Volta a variavel para o tipo boolean, pois quando
-        // o operador "|=" é usado o retorno é um inteiro
-        results[i].dataValues.belongsToStore = belongsToStore ? true : false;
-        results[i].dataValues.storeIndex = storeIndex;
-        products.push(results[i].dataValues);
+        
+        products.push(handleSingleResponse(results[i].dataValues,cache));
     }
 
     return products;
+}
+
+function handleSingleResponse(product, cache) {
+    var storeIndex = 0;
+    var belongsToStore = 0;
+
+    for (var j = 0; j < product.Stores.length; j++) {
+        var match = product.Stores[j].id === cache.stores[0].id;
+
+        if (match) {
+            storeIndex = j;
+        }
+
+        belongsToStore |= match;
+    }
+
+    // Volta a variavel para o tipo boolean, pois quando
+    // o operador "|=" é usado o retorno é um inteiro
+    product.belongsToStore = belongsToStore ? true : false;
+    product.storeIndex = storeIndex;
+
+    return product;
 }
 
 function getOrderBy(body) {
@@ -154,18 +164,13 @@ function registerRequestUpdate(req, res, next) {
     var cache = global.CacheManager.get(authHeader.token);
     var isAdmin = (cache.roles.indexOf('Admin') > -1 || cache.roles.indexOf('Lojista_Admin') > -1);
 
-    accessLayer.Product.findById(id, { 
-        include: [ 
-            accessLayer.Tag,
-            accessLayer.Store,
-        ]
-    }).then(function(result) {
+    findProductByID(id, cache.stores[0].id).then(function(result) {
         if (result) {
             
-            var original = result.dataValues;
+            var original = handleSingleResponse(result.dataValues,cache);
             req.body.changedBasic = changedBasicData(original,req.body);
             req.body.changedStore = changedStoreData(original,req.body);
-            var approvaded = isAdmin || !req.body.changedStore;
+            var approvaded = isAdmin || !req.body.changedBasic;
 
             if (!req.body.changedBasic && !req.body.changedStore) {
                 var customError = new framework.models.SwtError({ httpCode: 404, errorCode: 'SWT', message: 'Não foi encontrato alteração nos dados do produto' });
@@ -174,6 +179,7 @@ function registerRequestUpdate(req, res, next) {
             var productChange = {
                 original: JSON.stringify(original),
                 change: JSON.stringify(req.body),
+                changedBasicData: req.body.changedBasic,
                 userIdRequest: cache.user.id,
                 dateRequest: new Date(),
                 productId: req.body.id,
@@ -222,7 +228,7 @@ function updateBasicData(req, res, next) {
     var cache = global.CacheManager.get(authHeader.token);
     var productUpToDate = {};
 
-    if (req.body.changedBasic) {
+    if (req.body.changedBasic && req.body.change.status == 2) {
 
         accessLayer.orm.transaction(function(t) {
             return accessLayer.Product.update(req.body, { 
@@ -340,8 +346,12 @@ function getAll(req, res, next) {
             { model: accessLayer.Category, require: true }, 
             { model: accessLayer.Tag, require: false }, 
             { model: accessLayer.Nutrient, require: false }, 
-            { model: accessLayer.Store, require: false },
-            { model: accessLayer.ProductImage, as: 'images'}
+            { model: accessLayer.ProductImage, as: 'images'},
+            { 
+                model: accessLayer.Store, 
+                require: false,
+                through: { where: { storeId: cache.stores[0].id } }
+            }
         ],
         where: formatQuery(req.query),
         offset: offset,
@@ -368,14 +378,33 @@ function getById(req, res, next) {
     var cache = global.CacheManager.get(authHeader.token);
     var id = req.params.id;
 
-    accessLayer.Product.findById(id, { 
+    findProductByID(id, cache.stores[0].id).then(function(result) {
+        if (result) {
+            var product = handleSingleResponse(result.dataValues, cache);
+            res.json(product);
+        } else {
+            var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
+
+            next(customError);
+        }            
+    }, function(error) {
+        errorCallback(error, next);
+    });
+}
+
+function findProductByID(id, storeId) {
+    return accessLayer.Product.findById(id, { 
         include: [ 
             accessLayer.Brand, 
             accessLayer.Category, 
             accessLayer.Tag, 
-            accessLayer.Nutrient, 
-            accessLayer.Store, 
+            accessLayer.Nutrient,
             { model: accessLayer.ProductImage, as: 'images'},
+            { 
+                model: accessLayer.Store, 
+                require: false,
+                through: { where: { storeId: storeId } }
+            },
             { 
                 model: accessLayer.ProductChange, 
                 as: 'changes', 
@@ -385,33 +414,6 @@ function getById(req, res, next) {
                 ]
             }
         ]
-    }).then(function(result) {
-        if (result) {
-            var storeIndex = 0;
-            var belongsToStore = 0;
-
-            for (var i = 0; i < result.dataValues.Stores.length; i++) {
-                var match = result.dataValues.Stores[i].id === cache.stores[0].id;
-
-                if (match) {
-                    storeIndex = i;
-                }
-
-                belongsToStore |= match;
-            }
-
-            // Volta a variavel para o tipo boolean, pois quando
-            // o operador "|=" é usado o retorno é um inteiro
-            result.dataValues.belongsToStore = belongsToStore ? true : false;
-            result.dataValues.storeIndex = storeIndex;
-            res.json(result);
-        } else {
-            var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
-
-            next(customError);
-        }            
-    }, function(error) {
-        errorCallback(error, next);
     });
 }
 
@@ -454,22 +456,25 @@ function getByReference(req, res, next) {
                 { model: accessLayer.Brand, require: true }, 
                 { model: accessLayer.Category, require: true }, 
                 { model: accessLayer.Tag, require: false }, 
-                { model: accessLayer.Nutrient, require: false }, 
-                { model: accessLayer.Store, require: false },
-                { model: accessLayer.ProductImage, as: 'images'}
+                { model: accessLayer.Nutrient, require: false },
+                { model: accessLayer.ProductImage, as: 'images'},
+                { 
+                    model: accessLayer.Store, 
+                    require: false,
+                    through: { where: { storeId: cache.stores[0].id } }
+                }
             ],
             where: formatQuery(query),
             offset: offset,
             limit: limit,
             order: order
         }).then(function(result) {
-            var products = handleResponse(result.rows, cache);
-
+            
             var returnedData = {
                 draw: draw,
                 recordsTotal: result.count,
                 recordsFiltered: result.count,
-                data: products
+                data: handleResponse(result.rows, cache)
             }
 
             res.json(returnedData);
@@ -670,4 +675,135 @@ function changedStoreData(original, updated) {
                     original.Stores[0].ProductsStores.dataValues.price     == updated.price);
 
     return !isEquals;
+}
+
+function getAllApproval(req, res, next) {
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var cache = global.CacheManager.get(authHeader.token);
+    var offset = req.body.start || 0;
+    var limit = req.body.length || 10;
+    var draw = req.body.draw || 0;
+    var order = getOrderBy(req.body);
+    
+    accessLayer.ProductChange.findAndCountAll({ 
+        include: [ 
+            { 
+                model: accessLayer.Product, 
+                require: true,
+                include: [ 
+                    accessLayer.Brand, 
+                    accessLayer.Category, 
+                    accessLayer.Tag, 
+                    accessLayer.Nutrient,
+                    { model: accessLayer.ProductImage, as: 'images'}
+                ]
+            },
+            { model: accessLayer.Store, as: 'storeRequest', require: true}
+        ],
+        where: formatQuery(req.query),
+        offset: offset,
+        limit: limit,
+        order: order
+    }).then(function(result) {
+ 
+        var returnedData = {
+            draw: draw,
+            recordsTotal: result.count,
+            recordsFiltered: result.count,
+            data: handleResponseApproval(result.rows)
+        }
+
+        res.json(returnedData);
+    }, function(error) {
+        errorCallback(error, next);
+    });
+}
+
+function handleResponseApproval(results) {
+    var changes = [];
+    var statusString = ["","Pendente","Aprovado","Reprovado"];
+
+    for (var i = 0; i < results.length; i++) {
+        results[i].dataValues.changeObj = JSON.parse(results[i].dataValues.change);
+        results[i].dataValues.statusStr = statusString[results[i].dataValues.status]; 
+
+        if(results[i].dataValues.status == 1) {
+            results[i].dataValues.originalObj = results[i].dataValues.Product;
+        } else {
+            results[i].dataValues.originalObj = JSON.parse(results[i].dataValues.original);
+        }
+
+        changes.push(results[i].dataValues);
+    }
+
+    return changes;
+}
+
+function approveReject(req, res, next) {
+    var id = req.params.id;
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var cache = global.CacheManager.get(authHeader.token);
+    var applayChanges = req.body.action == 1;
+    var productUpToDate;
+
+    accessLayer.orm.transaction(function(t) {
+        return accessLayer.ProductChange.findById(id, { 
+            transaction: t,
+            include: [ 
+                { model: accessLayer.Product, require: true },
+                { model: accessLayer.Store, as: 'storeRequest', require: true}
+            ]
+        }).then(function(productChange) {
+            if (productChange) {
+                
+                productChange.status = applayChanges ? 2 : 3;
+                productChange.dateApproval = new Date();
+                productChange.userIdApproval = cache.user.id;
+                productChange.storeId = cache.stores[0].id;
+                productChange.reasonReject = req.body.reason;
+
+                if(applayChanges) {
+                    var product = JSON.parse(productChange.change);
+
+                    return accessLayer.Product.update(product, { 
+                        transaction: t,  
+                        where: { 
+                            id: product.id, 
+                            deletedAt: null 
+                        }
+                    }).then(function() {
+                        return accessLayer.Product.findById(id, { transaction: t }).then(function(result) {
+                            productUpToDate = result;                    
+
+                            return result.setTags(product.tags, { transaction: t }).then(function(tags) {
+
+                                return registerApprovalRequest(productChange, t);    
+                            });
+                        });
+                    });
+                } else {
+                    return registerApprovalRequest(productChange, t);
+                }
+            } else {
+                var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
+
+                next(customError);
+            }            
+        });
+    }).then(function(result) {
+        res.json(productUpToDate);
+    }, function(error) {
+        var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
+        
+        next(customError);
+    });
+}
+
+function registerApprovalRequest(productChange, t) {
+    return productChange.save().then(function(result) {
+        return accessLayer.ProductsChangesStoresApproval.bulkCreate([{
+            storeId: productChange.storeId,
+            productChangeId: productChange.id
+        }], { transaction: t });
+    });
 }

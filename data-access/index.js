@@ -95,7 +95,7 @@ StoreSchema.belongsToMany(ProductChangeSchema, { through: ProductsChangesStoresA
 
 // Cria (sobrescreve caso já exista) o banco de dados de acordo com os esquemas (Schema)
 //sequelize.sync({
-//    force: true
+//   force: true
 //});
 
 module.exports = {
