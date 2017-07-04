@@ -128,6 +128,27 @@ function preValidation(req, res, next) {
     }
 }
 
+function findAndCountAllProduct(query,offset,limit,order,storeId) {
+    return accessLayer.Product.findAndCountAll({
+        include: [ 
+            { model: accessLayer.Brand, require: true }, 
+            { model: accessLayer.Category, require: true }, 
+            { model: accessLayer.Tag, require: false }, 
+            { model: accessLayer.Nutrient, require: false },
+            { model: accessLayer.ProductImage, as: 'images'},
+            { 
+                model: accessLayer.Store, 
+                require: false,
+                through: { where: { storeId: storeId } }
+            }
+        ],
+        where: formatQuery(query),
+        offset: offset,
+        limit: limit,
+        order: order
+    });
+}
+
 function create(req, res, next) {
     var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
     var cache = global.CacheManager.get(authHeader.token);
@@ -340,24 +361,7 @@ function getAll(req, res, next) {
     var draw = req.body.draw || 0;
     var order = getOrderBy(req.body);
     
-    accessLayer.Product.findAndCountAll({ 
-        include: [ 
-            { model: accessLayer.Brand, require: true }, 
-            { model: accessLayer.Category, require: true }, 
-            { model: accessLayer.Tag, require: false }, 
-            { model: accessLayer.Nutrient, require: false }, 
-            { model: accessLayer.ProductImage, as: 'images'},
-            { 
-                model: accessLayer.Store, 
-                require: false,
-                through: { where: { storeId: cache.stores[0].id } }
-            }
-        ],
-        where: formatQuery(req.query),
-        offset: offset,
-        limit: limit,
-        order: order
-    }).then(function(result) {        
+    findAndCountAllProduct(req.query, offset, limit, order, cache.stores[0].id).then(function(result) {        
         var products = handleResponse(result.rows, cache);
 
         var returnedData = {
@@ -451,24 +455,7 @@ function getByReference(req, res, next) {
             $in: ids
         };
         
-        accessLayer.Product.findAndCountAll({
-            include: [ 
-                { model: accessLayer.Brand, require: true }, 
-                { model: accessLayer.Category, require: true }, 
-                { model: accessLayer.Tag, require: false }, 
-                { model: accessLayer.Nutrient, require: false },
-                { model: accessLayer.ProductImage, as: 'images'},
-                { 
-                    model: accessLayer.Store, 
-                    require: false,
-                    through: { where: { storeId: cache.stores[0].id } }
-                }
-            ],
-            where: formatQuery(query),
-            offset: offset,
-            limit: limit,
-            order: order
-        }).then(function(result) {
+        findAndCountAllProduct(query, offset, limit, order, cache.stores[0].id).then(function(result) {
             
             var returnedData = {
                 draw: draw,
@@ -612,20 +599,7 @@ function findByImage(req, res, next) {
             $in: ids
         };
         
-        accessLayer.Product.findAndCountAll({
-            include: [ 
-                { model: accessLayer.Brand, require: true }, 
-                { model: accessLayer.Category, require: true }, 
-                { model: accessLayer.Tag, require: false }, 
-                { model: accessLayer.Nutrient, require: false }, 
-                { model: accessLayer.Store, require: false },
-                { model: accessLayer.ProductImage, as: 'images'}
-            ],
-            where: query,
-            offset: offset,
-            limit: limit,
-            order: order
-        }).then(function(result) {
+        findAndCountAllProduct(query, offset, limit, order, cache.stores[0].id).then(function(result) {
             var products = handleResponse(result.rows, cache);
 
             var returnedData = {
