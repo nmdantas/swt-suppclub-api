@@ -140,6 +140,12 @@ function findAndCountAllProduct(query,offset,limit,order,storeId) {
                 model: accessLayer.Store, 
                 require: false,
                 through: { where: { storeId: storeId } }
+            },
+            { 
+                attributes: ['id','status'],
+                model: accessLayer.ProductChange, 
+                require: false,
+                as: 'changes'
             }
         ],
         where: formatQuery(query),
@@ -668,8 +674,7 @@ function getAllApproval(req, res, next) {
                     accessLayer.Brand, 
                     accessLayer.Category, 
                     accessLayer.Tag, 
-                    accessLayer.Nutrient,
-                    { model: accessLayer.ProductImage, as: 'images'}
+                    accessLayer.Nutrient
                 ]
             },
             { model: accessLayer.Store, as: 'storeRequest', require: true}
