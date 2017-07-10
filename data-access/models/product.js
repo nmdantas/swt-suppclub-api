@@ -12,7 +12,7 @@ module.exports = function(sequelize, DataType) {
         name: { type: DataType.STRING, allowNull: false, unique: true },
         description: { type: DataType.STRING, allowNull: true },
         contraindication: { type: DataType.STRING, allowNull: true },
-        status: { type: DataType.ENUM, values: ['Available', 'Pending', 'Sold'] },
+        status: { type: DataType.INTEGER, allowNull: false, default: 0 }, // 1 = Ativo; 2 = Inativo; 3 = Pendente
         ean: { type: DataType.STRING, allowNull: true }
     }, {
         paranoid: true,

@@ -43,7 +43,8 @@ module.exports = {
     ],
     approval:{
         all: getAllApproval,
-        update: approveReject
+        update: approveReject,
+        get: getApprovalById
     }
 };
 
@@ -158,7 +159,11 @@ function findAndCountAllProduct(query,offset,limit,order,storeId) {
 function create(req, res, next) {
     var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
     var cache = global.CacheManager.get(authHeader.token);
+    var isAdmin = (cache.roles.indexOf('Admin') > -1 || cache.roles.indexOf('Lojista_Admin') > -1);
     var responseBody = {};
+
+    // Se não for Admin, cadastra o produto como pendente de aprovação
+    req.body.status = isAdmin ? 1 : 3;
 
     accessLayer.orm.transaction(function(t) {
         return accessLayer.Product.create(req.body, { transaction: t }).then(function(product) {  
@@ -172,14 +177,32 @@ function create(req, res, next) {
                     stock: req.body.stock || 0,
                     price: req.body.price || 0.0
                 }], { transaction: t }).then(function(productsStores) {
+                    
                     responseBody = product;
+
+                    // Registra a pendencia de aprovação
+                    if (req.body.status == 3) {
+                        var productChange = {
+                            original: null,
+                            change: JSON.stringify(product),
+                            changedBasicData: true,
+                            userIdRequest: cache.user.id,
+                            dateRequest: new Date(),
+                            productId: product.id,
+                            status: 4,
+                            userIdApproval: null,
+                            dateApproval: null
+                        };
+
+                        return createProductChange(productChange, cache.stores[0].id, t);
+                    }
                 });
             });
         });
     }).then(function(result) {
         res.json(responseBody);
     }, function(error) {
-        var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
+        var customError = new framework.models.SwtError({ httpCode: 400, errorCode: 'SWT', message: error.message });
 
         next(customError);
     });
@@ -215,25 +238,10 @@ function registerRequestUpdate(req, res, next) {
                 dateApproval: approvaded ? new Date() : null
             };
 
+            req.body.changeStatus = productChange.status;
+
             accessLayer.orm.transaction(function(t) {
-                return accessLayer.ProductChange.create(productChange, { transaction: t }).then(function(change) {  
-
-                    req.body.change = change;
-
-                    return accessLayer.ProductsChangesStoresRequest.bulkCreate([{
-                        storeId: cache.stores[0].id,
-                        productChangeId: change.dataValues.id
-
-                    }], { transaction: t }).then(function(changeRequest) {
-                        if(productChange.status == 2) {
-
-                            return accessLayer.ProductsChangesStoresApproval.bulkCreate([{
-                                storeId: cache.stores[0].id,
-                                productChangeId: change.dataValues.id
-                            }], { transaction: t });
-                        }
-                    }); 
-                });
+                return createProductChange(productChange, cache.stores[0].id, t);
             }).then(function(result) {
                 next();
             }, function(error) {
@@ -249,13 +257,32 @@ function registerRequestUpdate(req, res, next) {
     });
 }
 
+function createProductChange(productChange,storeId,t) {
+    return accessLayer.ProductChange.create(productChange, { transaction: t }).then(function(change) {  
+
+        return accessLayer.ProductsChangesStoresRequest.bulkCreate([{
+            storeId: storeId,
+            productChangeId: change.dataValues.id
+
+        }], { transaction: t }).then(function(changeRequest) {
+            if(productChange.status == 2) {
+
+                return accessLayer.ProductsChangesStoresApproval.bulkCreate([{
+                    storeId: storeId,
+                    productChangeId: change.dataValues.id
+                }], { transaction: t });
+            }
+        }); 
+    });
+}
+
 function updateBasicData(req, res, next) {
     var id = req.params.id;
     var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
     var cache = global.CacheManager.get(authHeader.token);
     var productUpToDate = {};
 
-    if (req.body.changedBasic && req.body.change.status == 2) {
+    if (req.body.changedBasic && req.body.changeStatus == 2) {
 
         accessLayer.orm.transaction(function(t) {
             return accessLayer.Product.update(req.body, { 
@@ -664,6 +691,13 @@ function getAllApproval(req, res, next) {
     var limit = req.body.length || 10;
     var draw = req.body.draw || 0;
     var order = getOrderBy(req.body);
+
+    var where = formatQuery(req.query);
+    //where.changedBasicData = { $equal: 1 };
+    where.$or = [
+        { status: 1 },
+        { status: 4 }
+    ];
     
     accessLayer.ProductChange.findAndCountAll({ 
         include: [ 
@@ -679,17 +713,22 @@ function getAllApproval(req, res, next) {
             },
             { model: accessLayer.Store, as: 'storeRequest', require: true}
         ],
-        where: formatQuery(req.query),
+        where: where,
         offset: offset,
         limit: limit,
         order: order
     }).then(function(result) {
  
+        var changes = [];
+        for (var i = 0; i < result.rows.length; i++) {
+            changes.push(handleResponseApproval(result.rows[i].dataValues));
+        }
+
         var returnedData = {
             draw: draw,
             recordsTotal: result.count,
             recordsFiltered: result.count,
-            data: handleResponseApproval(result.rows)
+            data: changes
         }
 
         res.json(returnedData);
@@ -698,24 +737,55 @@ function getAllApproval(req, res, next) {
     });
 }
 
-function handleResponseApproval(results) {
-    var changes = [];
-    var statusString = ["","Pendente","Aprovado","Reprovado"];
+function getApprovalById(req, res, next) {
+    var id = req.params.id;
 
-    for (var i = 0; i < results.length; i++) {
-        results[i].dataValues.changeObj = JSON.parse(results[i].dataValues.change);
-        results[i].dataValues.statusStr = statusString[results[i].dataValues.status]; 
-
-        if(results[i].dataValues.status == 1) {
-            results[i].dataValues.originalObj = results[i].dataValues.Product;
+    accessLayer.ProductChange.findById(id, {
+        include: [ 
+            { 
+                model: accessLayer.Product, 
+                require: true,
+                include: [ 
+                    accessLayer.Brand, 
+                    accessLayer.Category, 
+                    accessLayer.Tag, 
+                    accessLayer.Nutrient
+                ]
+            },
+            { model: accessLayer.Store, as: 'storeRequest', require: true}
+        ]
+    }).then(function(result) {
+        if (result) {
+            var change = handleResponseApproval(result);
+            res.json(change);
         } else {
-            results[i].dataValues.originalObj = JSON.parse(results[i].dataValues.original);
-        }
+            var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
 
-        changes.push(results[i].dataValues);
+            next(customError);
+        }            
+    }, function(error) {
+        errorCallback(error, next);
+    });
+}
+
+function handleResponseApproval(results) {
+    var statusString = ["","Pendente","Aprovado","Reprovado","Novo Produto"];
+
+    results.statusStr = statusString[results.status]; 
+
+    if(results.status == 1) {
+        results.originalObj = results.Product;
+    } else {
+        results.originalObj = JSON.parse(results.original);
     }
 
-    return changes;
+    if(results.status == 4) {
+        results.changeObj = results.Product;
+    } else {
+        results.changeObj = JSON.parse(results.change);
+    }
+
+    return results;
 }
 
 function approveReject(req, res, next) {
@@ -753,7 +823,7 @@ function approveReject(req, res, next) {
                     }).then(function() {
                         return accessLayer.Product.findById(id, { transaction: t }).then(function(result) {
                             productUpToDate = result;                    
-
+                            product.tags = product.tags || [];
                             return result.setTags(product.tags, { transaction: t }).then(function(tags) {
 
                                 return registerApprovalRequest(productChange, t);    

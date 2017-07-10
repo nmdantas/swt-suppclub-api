@@ -27,5 +27,6 @@ router.post('/products/image/find', business.findByImage);
 
 router.post('/products/approval', framework.security.authorize(['Admin','Lojista_Admin']), business.approval.all);
 router.put('/products/approval/:id', framework.security.authorize(['Admin','Lojista_Admin']), business.approval.update);
+router.get('/products/approval/:id', business.approval.get);
 
 module.exports = router;
