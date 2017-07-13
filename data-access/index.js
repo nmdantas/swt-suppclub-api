@@ -52,6 +52,7 @@ CategorySchema.belongsTo(CategorySchema, { foreignKey: 'categoryId', as: 'parent
 
 // Associações de Produto
 var ProductsTags = sequelize.define('ProductsTags', {}, { freezeTableName: true });
+var ProductsObjectives = sequelize.define('ProductsObjectives', {}, { freezeTableName: true });
 var ProductsChangesStoresRequest = sequelize.define('ProductsChangesStoresRequest', {}, { freezeTableName: true });
 var ProductsChangesStoresApproval = sequelize.define('ProductsChangesStoresApproval', {}, { freezeTableName: true });
 var ProductsNutrients = sequelize.define('ProductsNutrients', {
@@ -66,9 +67,11 @@ CategorySchema.hasMany( ProductSchema, { as: 'products', foreignKey: 'categoryId
 ProductSchema.belongsTo(CategorySchema, { foreignKey: 'categoryId' });
 
 ProductSchema.belongsToMany(TagSchema, { through: ProductsTags, foreignKey: 'productId', otherKey: 'tagId' });
+ProductSchema.belongsToMany(ObjectiveSchema, { through: ProductsObjectives, foreignKey: 'productId', otherKey: 'objectiveId' });
 ProductSchema.belongsToMany(NutrientSchema, { through: ProductsNutrients, foreignKey: 'productId', otherKey: 'nutrientId' });
 
 TagSchema.belongsToMany(ProductSchema, { through: ProductsTags, foreignKey: 'tagId', otherKey: 'productId' });
+ObjectiveSchema.belongsToMany(ProductSchema, { through: ProductsObjectives, foreignKey: 'objectiveId', otherKey: 'productId' });
 NutrientSchema.belongsToMany(ProductSchema, { through: ProductsNutrients, foreignKey: 'nutrientId', otherKey: 'productId' });
 
 // Associações de Lojas x Produtos

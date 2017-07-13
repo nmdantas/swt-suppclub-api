@@ -15,7 +15,7 @@ module.exports = {
     get: {
         all: getAll,
         byId: getById,
-        byReference: getByReference
+        byDataStore: getByDataStore
     },
     create:[
         preValidation,
@@ -60,6 +60,7 @@ function handleResponse(results, cache) {
 }
 
 function handleSingleResponse(product, cache) {
+    var isAdmin = (cache.roles.indexOf('Admin') > -1 || cache.roles.indexOf('Lojista_Admin') > -1);
     var storeIndex = 0;
     var belongsToStore = 0;
 
@@ -77,6 +78,16 @@ function handleSingleResponse(product, cache) {
     // o operador "|=" é usado o retorno é um inteiro
     product.belongsToStore = belongsToStore ? true : false;
     product.storeIndex = storeIndex;
+
+    if(!isAdmin && product.changes.length > 0) {
+        var changes = [];
+        for (var j = 0; j < product.changes.length; j++) {
+            if(product.changes[j].storeRequest[0].id == cache.stores[0].id) {
+                changes.push(product.changes[j]);
+            }
+        }
+        product.changes = changes;
+    }
 
     return product;
 }
@@ -102,7 +113,7 @@ function formatQuery(query) {
     }
 
     for (var property in query) {
-        if (typeof query[property] === 'object') {
+        if (typeof query[property] === 'object' && query[property].$like) {
             query[property].$like = '%' + query[property].$like + '%';
         }
     }
@@ -146,7 +157,10 @@ function findAndCountAllProduct(query,offset,limit,order,storeId) {
                 attributes: ['id','status'],
                 model: accessLayer.ProductChange, 
                 require: false,
-                as: 'changes'
+                as: 'changes',
+                include: [
+                    { model: accessLayer.Store, as: 'storeRequest', require: true}
+                ]
             }
         ],
         where: formatQuery(query),
@@ -454,7 +468,7 @@ function findProductByID(id, storeId) {
     });
 }
 
-function getByReference(req, res, next) {
+function getByDataStore(req, res, next) {
     var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
     var cache = global.CacheManager.get(authHeader.token);
     var code = req.params.code;
@@ -462,19 +476,19 @@ function getByReference(req, res, next) {
     var limit = req.body.length || 10;
     var draw = req.body.draw || 0;
     var order = getOrderBy(req.body);
-    
+
+    var where = { storeId: cache.stores[0].id };
+    if(code && code != "undefined") {
+        where.reference = { $like: '%' + code + '%' };
+    }
+
     if (order.length == 0) {
         order.push(['name','asc']);
     }
 
     accessLayer.ProductsStores.findAll({ 
         attributes: ['productId'],
-        where: {
-            storeId: cache.stores[0].id,
-            reference: {
-                $like: '%' + code + '%'
-            }
-        }
+        where: where
     }).then(function(productsStores) {
         var ids = [];
         var query = req.query || {};

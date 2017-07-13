@@ -18,7 +18,7 @@ router.put('/products/:id', business.update);
 router.delete('/products/:id', framework.security.authorize(['Admin','Lojista_Admin']), business.delete);
 
 router.post('/products/pagination', business.get.all);
-router.get('/products/reference/:code', business.get.byReference);
+router.get('/products/datastore/:code', business.get.byDataStore);
 router.delete('/products/:id/relationship', business.deleteRelationship);
 
 router.post('/products/image', framework.security.authorize(['Admin','Lojista_Admin']), business.uploadImage);
