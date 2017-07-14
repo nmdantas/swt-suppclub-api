@@ -104,13 +104,7 @@ function list(req, res, next) {
         }, errorCallback);
     } else {
         accessLayer.Tag.findAll().then(function(results) {
-            var categories = [];
-
-            for (var i = 0; i < results.length; i++) {
-                categories.push(results[i].dataValues);
-            }
-
-            res.json(categories);
+            res.json(results);
         }, errorCallback);
     }
 }

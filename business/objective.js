@@ -58,17 +58,25 @@ function create(req, res, next) {
 function update(req, res, next) {
     var id = req.params.id;
     
-    accessLayer.Objective.update(req.body, { where: { id: id, deletedAt: null } }).then(function(result) {
-        if (result[0]) {
-            res.end();
-        } else {
-            var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
+    accessLayer.orm.transaction(function(t) {
 
-            next(customError);
-        }
+        return accessLayer.Objective.update(req.body, { 
+            where: { 
+                id: id, 
+                deletedAt: null 
+            } 
+        }).then(function(result) {
+
+            return accessLayer.Objective.findById(id, { transaction: t }).then(function(objective) {
+
+                return objective.setTags(req.body.tags, { transaction: t });
+            });
+        });
+    }).then(function(result) {
+        res.end();
     }, function(error) {
         var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
-
+        
         next(customError);
     });
 }
@@ -113,14 +121,10 @@ function list(req, res, next) {
             }            
         }, errorCallback);
     } else {
-        accessLayer.Objective.findAll({ include: [{ all: true }]}).then(function(results) {
-            var categories = [];
-
-            for (var i = 0; i < results.length; i++) {
-                categories.push(results[i].dataValues);
-            }
-
-            res.json(categories);
+        accessLayer.Objective.findAll({ 
+            include: [{ model: accessLayer.Tag, require: false }]
+        }).then(function(results) {
+            res.json(results);
         }, errorCallback);
     }
 }

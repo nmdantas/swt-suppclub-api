@@ -110,14 +110,21 @@ function list(req, res, next) {
             }            
         }, errorCallback);
     } else {
-        accessLayer.Category.findAll({ include: [{ all: true }]}).then(function(results) {
-            var categories = [];
-
-            for (var i = 0; i < results.length; i++) {
-                categories.push(results[i].dataValues);
-            }
-
-            res.json(categories);
+        accessLayer.Category.findAll({ 
+            include: [
+                { 
+                    model: accessLayer.Category, 
+                    require: false,
+                    as: 'parent'
+                },
+                { 
+                    model: accessLayer.Category, 
+                    require: false,
+                    as: 'categories'
+                }
+            ]
+        }).then(function(results) {
+            res.json(results);
         }, errorCallback);
     }
 }
