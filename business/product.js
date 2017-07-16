@@ -15,7 +15,8 @@ module.exports = {
     get: {
         all: getAll,
         byId: getById,
-        byDataStore: getByDataStore
+        byDataStore: getByDataStore,
+        count: getCountByStore
     },
     create:[
         preValidation,
@@ -44,7 +45,8 @@ module.exports = {
     approval:{
         all: getAllApproval,
         update: approveReject,
-        get: getApprovalById
+        get: getApprovalById,
+        count: approvalCountByStore
     }
 };
 
@@ -146,7 +148,7 @@ function findAndCountAllProduct(query,offset,limit,order,storeId) {
             { model: accessLayer.Brand, require: true }, 
             { model: accessLayer.Category, require: true }, 
             { model: accessLayer.Tag, require: false }, 
-            { model: accessLayer.Nutrient, require: false },
+            { model: accessLayer.Objective, require: false },
             { model: accessLayer.ProductImage, as: 'images'},
             { 
                 model: accessLayer.Store, 
@@ -310,7 +312,10 @@ function updateBasicData(req, res, next) {
 
                     return product.setTags(req.body.tags, { transaction: t }).then(function(tags) {
                         
+                        return product.setObjectives(req.body.objectives, { transaction: t }).then(function(objectives) {
+                        
                         productUpToDate = product;                    
+                    });                   
                     });
                 });
             });
@@ -443,13 +448,28 @@ function getById(req, res, next) {
     });
 }
 
+function getCountByStore(req, res, next) {
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var cache = global.CacheManager.get(authHeader.token);
+
+    accessLayer.ProductsStores.count({
+        where: {
+            storeId: cache.stores[0].id
+        }
+    }).then(function(result) {
+        res.json(result);
+    }, function(error) {
+        errorCallback(error, next);
+    });
+}
+
 function findProductByID(id, storeId) {
     return accessLayer.Product.findById(id, { 
         include: [ 
             accessLayer.Brand, 
             accessLayer.Category, 
             accessLayer.Tag, 
-            accessLayer.Nutrient,
+            accessLayer.Objective,
             { model: accessLayer.ProductImage, as: 'images'},
             { 
                 model: accessLayer.Store, 
@@ -675,7 +695,8 @@ function changedBasicData(original, updated) {
                     original.ean              == updated.ean              &&
                     original.brandId          == updated.brandId          &&
                     original.categoryId       == updated.categoryId       &&
-                    original.Tags.length      == updated.tags.length);
+                    original.Tags.length      == updated.tags.length      &&
+                    original.Objectives.length      == updated.objectives.length);
 
     if (isEquals && original.Tags.length > 0 && updated.tags.length > 0) {
         for (var i = 0; i < original.Tags.length; i++) {
@@ -868,5 +889,16 @@ function registerApprovalRequest(productChange, t) {
             storeId: productChange.storeId,
             productChangeId: productChange.id
         }], { transaction: t });
+    });
+}
+
+function approvalCountByStore(req, res, next) {
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var cache = global.CacheManager.get(authHeader.token);
+
+    accessLayer.ProductChange.count().then(function(result) {
+        res.json(result);
+    }, function(error) {
+        errorCallback(error, next);
     });
 }
