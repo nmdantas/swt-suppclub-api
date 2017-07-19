@@ -24,7 +24,7 @@
     "lodash-node": "^3.10.2",
     "mysql": "^2.13.0",
     "sequelize": "^3.30.4",
-    "swt-framework": "^0.1.x",
+    "swt-framework": "^0.2.x",
     "swt-user-manager": "^0.1.x"
   },
   "devDependencies": {
