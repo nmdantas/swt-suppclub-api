@@ -893,10 +893,11 @@ function registerApprovalRequest(productChange, t) {
 }
 
 function approvalCountByStore(req, res, next) {
-    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
-    var cache = global.CacheManager.get(authHeader.token);
-
-    accessLayer.ProductChange.count().then(function(result) {
+    accessLayer.ProductChange.count({
+        where: {
+            $or: [{status: 1}, {status: 4}]
+        }
+    }).then(function(result) {
         res.json(result);
     }, function(error) {
         errorCallback(error, next);

@@ -72,6 +72,17 @@ function hasSameRegistered(req, res, next) {
 }
 
 function create(req, res, next) {
+    var identity = framework.common.parseAuthHeader(req.headers.authorization);
+    
+    // Verifica se ha "sessao" criada para o usuario
+    if (global.CacheManager.has(identity.token)) {
+        // Verifica se o usuario tem permissao para editar o status
+        if (global.CacheManager.get(identity.token).roles.indexOf("Admin") == -1
+                && global.CacheManager.get(identity.token).roles.indexOf("Lojista_Admin") == -1) {
+            req.body.status = 3;
+        }
+    }
+
     accessLayer.Brand.create(req.body).then(function(result) {
         res.json(result);
     }, function(error) {
@@ -88,7 +99,8 @@ function update(req, res, next) {
     // Verifica se ha "sessao" criada para o usuario
     if (global.CacheManager.has(identity.token)) {
         // Verifica se o usuario tem permissao para editar o status
-        if (global.CacheManager.get(identity.token).roles.indexOf("Admin") == -1) {
+        if (global.CacheManager.get(identity.token).roles.indexOf("Admin") == -1
+                && global.CacheManager.get(identity.token).roles.indexOf("Lojista_Admin") == -1) {
             req.body.status = 3;
         }
     }    

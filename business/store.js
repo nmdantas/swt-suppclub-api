@@ -18,6 +18,11 @@ module.exports = {
         byUser: getByUser
     },
     update: {
+        data: [
+            preValidation,
+            hasSameRegistered,
+            update
+        ],
         open: updateOpen
     }
 };
@@ -26,6 +31,92 @@ function errorCallback(error, next) {
     var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
 
     next(customError);
+}
+
+function preValidation(req, res, next) {
+    var constraints = framework.common.validation.requiredFor('name','nickname','email','cnpj','sponsor','status');
+    var validationErrors = framework.common.validation.validate(req.body, constraints);
+
+    if (validationErrors) {
+        var error = new framework.models.SwtError({ httpCode: 400, details: validationErrors });
+
+        next(error);
+    } else {
+
+        var id = req.params ? req.params.id : 0;
+        var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+        var cache = global.CacheManager.get(authHeader.token);
+
+        if(id) {
+            accessLayer.StoresUsersSchema.findAll({
+                where: { 
+                    storeId: id,
+                    userId: cache.user.id
+                }
+            }).then(function(result){
+                if (result) {
+                    next();
+                } else {
+                    var customError = new framework.models.SwtError({ httpCode: 410, message: 'Você não tem permissão para editar os dados dessa loja.' });
+                    next(customError);
+                }
+            }, errorCallback);
+        } else {
+            next();
+        }
+
+    }
+}
+
+function hasSameRegistered(req, res, next) {
+    var varId = req.body.id || 0;
+    var errorCallback = function(error) {
+        var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
+
+        next(customError);
+    };
+
+    accessLayer.Store.findAll({ 
+        where: {
+            id: { $ne: varId }, 
+            name: { $like: req.body.name  }
+        }
+    }).then(function(result) {
+        if (result) {
+
+            if (result.length > 0) {
+                var customError = new framework.models.SwtError({ httpCode: 400, message: 'Loja já cadastrado!' });
+
+                next(customError);
+            } else {
+                next();
+            }
+
+        } else {
+            var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
+
+            next(customError);
+        }
+    }, errorCallback);
+}
+
+function update(req, res, next) {
+    var id = req.params.id;
+    var identity = framework.common.parseAuthHeader(req.headers.authorization);
+ 
+    accessLayer.Store.update(req.body, { where: { id: id, deletedAt: null } }).then(function(result) {
+        if (result[0]) {
+            res.end();
+        } else {
+            var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
+
+            next(customError);
+        }
+    }, function(error) {
+        var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
+
+        next(customError);
+    });
 }
 
 function getAll(req, res, next) {

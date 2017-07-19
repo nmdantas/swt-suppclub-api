@@ -27,8 +27,8 @@ router.delete('/products/image/:id', framework.security.authorize(['Admin','Loji
 router.post('/products/image/find', business.findByImage);
 
 router.post('/products/approval', framework.security.authorize(['Admin','Lojista_Admin']), business.approval.all);
+router.get('/products/approval/count', business.approval.count);
 router.put('/products/approval/:id', framework.security.authorize(['Admin','Lojista_Admin']), business.approval.update);
 router.get('/products/approval/:id', business.approval.get);
-router.get('/products/approval/count', business.approval.count);
 
 module.exports = router;
