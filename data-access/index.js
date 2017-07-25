@@ -12,7 +12,7 @@
  */
 var Sequelize = require('sequelize');
 var options = {
-    host: 'localhost', //process.env.DB_HOST,
+    host: process.env.DB_HOST,
     dialect: process.env.DB_DIALECT,
     pool: {
         min: 0,
