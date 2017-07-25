@@ -15,11 +15,17 @@ module.exports = {
     get: {
         all: getAll,
         byId: getById,
-        byUser: getByUser
+        byUser: getByUser,
+        storeShift: [
+            isAllowed,
+            getById,
+            changeSession
+        ]
     },
     update: {
         data: [
             preValidation,
+            isAllowed,
             hasSameRegistered,
             update
         ],
@@ -42,30 +48,28 @@ function preValidation(req, res, next) {
 
         next(error);
     } else {
-
-        var id = req.params ? req.params.id : 0;
-        var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
-        var cache = global.CacheManager.get(authHeader.token);
-
-        if(id) {
-            accessLayer.StoresUsersSchema.findAll({
-                where: { 
-                    storeId: id,
-                    userId: cache.user.id
-                }
-            }).then(function(result){
-                if (result) {
-                    next();
-                } else {
-                    var customError = new framework.models.SwtError({ httpCode: 410, message: 'Você não tem permissão para editar os dados dessa loja.' });
-                    next(customError);
-                }
-            }, errorCallback);
-        } else {
-            next();
-        }
-
+        next();
     }
+}
+
+function isAllowed(req, res, next) {
+    var id = req.params ? req.params.id : 0;
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var cache = global.CacheManager.get(authHeader.token);
+
+    accessLayer.StoresUsers.findAll({
+        where: { 
+            storeId: id,
+            userId: cache.user.id
+        }
+    }).then(function(result){
+        if (result) {
+            next();
+        } else {
+            var customError = new framework.models.SwtError({ httpCode: 410, message: 'Você não tem permissão para editar os dados dessa loja.' });
+            next(customError);
+        }
+    }, errorCallback);
 }
 
 function hasSameRegistered(req, res, next) {
@@ -102,25 +106,40 @@ function hasSameRegistered(req, res, next) {
 
 function update(req, res, next) {
     var id = req.params.id;
-    var identity = framework.common.parseAuthHeader(req.headers.authorization);
- 
-    accessLayer.Store.update(req.body, { where: { id: id, deletedAt: null } }).then(function(result) {
-        if (result[0]) {
-            res.end();
-        } else {
-            var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
 
-            next(customError);
-        }
+    var whereInner = { 
+        storeId: id, 
+        deletedAt: null 
+    };
+
+    accessLayer.orm.transaction(function(t) {
+        return accessLayer.Store.update(req.body, { 
+            transaction: t,  
+            where: { 
+                id: id, 
+                deletedAt: null 
+            }
+        }).then(function() {
+            return accessLayer.StoreAddress.update(req.body.address, { transaction: t, where: whereInner }).then(function() {
+                return accessLayer.StoreParameters.update(req.body.parameters, { transaction: t, where: whereInner });
+            });
+        });
+    }).then(function(result) {
+        res.end();
     }, function(error) {
         var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
-
+        
         next(customError);
     });
 }
 
 function getAll(req, res, next) {
-    accessLayer.Store.findAll().then(function(results) {
+    accessLayer.Store.findAll({
+        include: [
+            { model: accessLayer.StoreAddress, require: false, as: 'address' },
+            { model: accessLayer.StoreParameters, require: false, as: 'parameters' }
+        ]
+    }).then(function(results) {
         var stores = [];
 
         for (var i = 0; i < results.length; i++) {
@@ -136,9 +155,15 @@ function getAll(req, res, next) {
 function getById(req, res, next) {
     var id = req.params.id;
     
-    accessLayer.Store.findById(id).then(function(result) {
+    accessLayer.Store.findById(id, {
+        include: [
+            { model: accessLayer.StoreAddress, require: false, as: 'address' },
+            { model: accessLayer.StoreParameters, require: false, as: 'parameters' }
+        ]
+    }).then(function(result) {
         if (result) {
             res.json(result);
+            next();
         } else {
             var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
 
@@ -165,6 +190,10 @@ function getByUser(req, res, next) {
         }
         
         accessLayer.Store.findAll({
+            include: [
+                { model: accessLayer.StoreAddress, require: false, as: 'address' },
+                { model: accessLayer.StoreParameters, require: false, as: 'parameters' }
+            ],
             where: { 
                 id: {
                     $in: ids
@@ -221,4 +250,8 @@ function updateOpen(req, res, next) {
     }, function(error) {
         errorCallback(error, next);
     });
+}
+
+function changeSession(req, res, next) {
+    
 }

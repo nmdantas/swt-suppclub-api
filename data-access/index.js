@@ -12,7 +12,7 @@
  */
 var Sequelize = require('sequelize');
 var options = {
-    host: process.env.DB_HOST,
+    host: 'localhost', //process.env.DB_HOST,
     dialect: process.env.DB_DIALECT,
     pool: {
         min: 0,
@@ -31,7 +31,9 @@ var sequelize = new Sequelize(process.env.DB_BASE, process.env.DB_USER, process.
 var NutrientSchema = sequelize.import('./models/nutrient');
 var BrandSchema = sequelize.import('./models/brand');
 var StoreSchema = sequelize.import('./models/store');
-var StoresUsersSchema = sequelize.import('./models/storesUsers')
+var StoreAddressSchema = sequelize.import('./models/storeAddress');
+var StoresUsersSchema = sequelize.import('./models/storesUsers');
+var StoreParametersSchema = sequelize.import('./models/storeParameters');
 var PostSchema = sequelize.import('./models/post');
 var TagSchema = sequelize.import('./models/tag');
 var ObjectiveSchema = sequelize.import('./models/objective');
@@ -96,6 +98,9 @@ StoreSchema.belongsToMany(ProductChangeSchema, { through: ProductsChangesStoresR
 ProductChangeSchema.belongsToMany(StoreSchema, { through: ProductsChangesStoresApproval, foreignKey: 'productChangeId', otherKey: 'storeId', as: 'storeApproval' });
 StoreSchema.belongsToMany(ProductChangeSchema, { through: ProductsChangesStoresApproval, foreignKey: 'storeId', otherKey: 'productChangeId' });
 
+StoreSchema.hasOne(StoreAddressSchema, { as: 'address', foreignKey: 'storeId'});
+StoreSchema.hasOne(StoreParametersSchema, { as: 'parameters', foreignKey: 'storeId'});
+
 // Cria (sobrescreve caso já exista) o banco de dados de acordo com os esquemas (Schema)
 //sequelize.sync({
 //   force: true
@@ -106,7 +111,9 @@ module.exports = {
     Nutrient: NutrientSchema,
     Brand: BrandSchema,
     Store: StoreSchema,
+    StoreAddress: StoreAddressSchema,
     StoresUsers: StoresUsersSchema,
+    StoreParameters: StoreParametersSchema,
     Post: PostSchema,
     Tag: TagSchema,
     Objective: ObjectiveSchema,

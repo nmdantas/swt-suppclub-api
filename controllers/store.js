@@ -13,6 +13,8 @@ var framework   = require('swt-framework');
 
 router.get('/stores', business.get.all);
 router.get('/stores/:id', business.get.byId);
+router.get('/stores/:id/shift', business.get.storeShift);
+router.put('/stores/:id', business.update.data);
 router.get('/stores/user/:id', business.get.byUser);
 
 router.post('/stores/open', business.update.open);
