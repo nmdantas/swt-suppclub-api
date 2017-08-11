@@ -60,4 +60,6 @@ before('Sync test database', function(done) {
 // // Objetivos
 // require('./cases/objective')(app);
 // Lojas
-require('./cases/store')(app);
+// require('./cases/store')(app);
+// APP Mobile
+require('./cases/appMobile')(app);

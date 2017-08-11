@@ -48,6 +48,9 @@ var ObjectivesTags = sequelize.define('ObjectivesTags', {}, { freezeTableName: t
 ObjectiveSchema.belongsToMany(TagSchema, { through: ObjectivesTags, foreignKey: 'objectiveId', otherKey: 'tagId' });
 TagSchema.belongsToMany(ObjectiveSchema, { through: ObjectivesTags, foreignKey: 'tagId', otherKey: 'objectiveId' });
 
+// Associação Objetivo x Usuário
+ObjectivesUsersSchema.belongsTo(ObjectiveSchema, { foreignKey: 'objectiveId', as: 'objective' });
+
 // Associação de Hierarquida de categorias
 CategorySchema.hasMany(CategorySchema, { foreignKey: 'categoryId', as: 'categories' });
 CategorySchema.belongsTo(CategorySchema, { foreignKey: 'categoryId', as: 'parent' });

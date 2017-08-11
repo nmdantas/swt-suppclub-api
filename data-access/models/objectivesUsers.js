@@ -9,10 +9,15 @@
 
 module.exports = function(sequelize, DataType) {
     return sequelize.define('ObjectivesUsers', {
-        objectiveId: { type: DataType.INTEGER, allowNull: false, primaryKey: true },
-        userId: { type: DataType.INTEGER, allowNull: false, primaryKey: true }
+        userId: { type: DataType.INTEGER, allowNull: false }
     }, {
         underscored: false,
-        freezeTableName: true
+        freezeTableName: true,
+        indexes: [
+            {
+                unique: false,
+                fields: ['userId']
+            }
+        ]
     });
 }
