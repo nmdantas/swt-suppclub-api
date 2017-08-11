@@ -37,6 +37,7 @@ var StoreParametersSchema = sequelize.import('./models/storeParameters');
 var PostSchema = sequelize.import('./models/post');
 var TagSchema = sequelize.import('./models/tag');
 var ObjectiveSchema = sequelize.import('./models/objective');
+var ObjectivesUsersSchema = sequelize.import('./models/objectivesUsers');
 var CategorySchema = sequelize.import('./models/category');
 var ProductSchema = sequelize.import('./models/product');
 var ProductImageSchema = sequelize.import('./models/productImage');
@@ -44,7 +45,6 @@ var ProductChangeSchema = sequelize.import('./models/productChange');
 
 // Associação Objetivo x Tag
 var ObjectivesTags = sequelize.define('ObjectivesTags', {}, { freezeTableName: true });
-
 ObjectiveSchema.belongsToMany(TagSchema, { through: ObjectivesTags, foreignKey: 'objectiveId', otherKey: 'tagId' });
 TagSchema.belongsToMany(ObjectiveSchema, { through: ObjectivesTags, foreignKey: 'tagId', otherKey: 'objectiveId' });
 
@@ -117,6 +117,7 @@ module.exports = {
     Post: PostSchema,
     Tag: TagSchema,
     Objective: ObjectiveSchema,
+    ObjectivesUsers: ObjectivesUsersSchema,
     Category: CategorySchema,
     Product: ProductSchema,
     ProductsStores: ProductsStores,

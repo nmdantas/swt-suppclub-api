@@ -21,7 +21,11 @@ module.exports = {
         preValidation,
         update
     ],
-    delete: destroy
+    delete: destroy,
+    user: {
+        update: updateUserObjectives,
+        list: listUserObjectives
+    }
 };
 
 function preValidation(req, res, next) {
@@ -128,3 +132,47 @@ function list(req, res, next) {
         }, errorCallback);
     }
 }
+
+function updateUserObjectives(req, res, next) {
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var cache = global.CacheManager.get(authHeader.token);
+    
+    var objectivesUsers = [];
+    for (var i = 0; index < req.body.length; i++) {
+        objectivesUsers.push(
+            userId: cache.user.id,
+            objectiveId: req.body[i].id
+        );
+    }
+
+    accessLayer.orm.transaction(function(t) {
+
+        return accessLayer.ObjectivesUsers.destroy({ where: { userId: cache.user.id } }).then(function(result) {
+            return accessLayer.ProductsStores.bulkCreate(objectivesUsers, { transaction: t });
+
+        });
+
+    }).then(function(result) {
+        res.end();
+    }, function(error) {
+        var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
+        
+        next(customError);
+    });
+}
+
+function listUserObjectives(req, res, next) {
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var cache = global.CacheManager.get(authHeader.token);
+    
+    accessLayer.ObjectivesUsers.findAll({ 
+        where: { userId: cache.user.id }
+    }).then(function(results) {
+        res.json(results);
+    }, function(error) {
+        var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
+
+        next(customError);
+    });
+}
+    
