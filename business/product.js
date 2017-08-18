@@ -16,7 +16,8 @@ module.exports = {
         all: getAll,
         byId: getById,
         byDataStore: getByDataStore,
-        count: getCountByStore
+        count: getCountByStore,
+        byUserObjective: getByUserObjective
     },
     create:[
         preValidation,
@@ -50,18 +51,20 @@ module.exports = {
     }
 };
 
-function handleResponse(results, cache) {
+function handleResponse(results, req) {
     var products = [];
 
     for (var i = 0; i < results.length; i++) {
         
-        products.push(handleSingleResponse(results[i].dataValues,cache));
+        products.push(handleSingleResponse(results[i].dataValues,req));
     }
 
     return products;
 }
 
-function handleSingleResponse(product, cache) {
+function handleSingleResponse(product, req) {
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var cache = global.CacheManager.get(authHeader.token);
     var isAdmin = (cache.roles.indexOf('Admin') > -1 || cache.roles.indexOf('Lojista_Admin') > -1);
     var storeIndex = 0;
     var belongsToStore = 0;
@@ -142,29 +145,41 @@ function preValidation(req, res, next) {
     }
 }
 
-function findAndCountAllProduct(query,offset,limit,order,storeId) {
+function findAndCountAllProduct(query,offset,limit,order,storeId,objective) {
+
+    var include = [ 
+        { model: accessLayer.Brand, require: true }, 
+        { model: accessLayer.Category, require: true }, 
+        { model: accessLayer.Tag, require: false },
+        { model: accessLayer.ProductImage, as: 'images'},
+        { 
+            attributes: ['id','status'],
+            model: accessLayer.ProductChange, 
+            require: false,
+            as: 'changes',
+            include: [
+                { model: accessLayer.Store, as: 'storeRequest', require: true}
+            ]
+        }
+    ];
+
+    // indicados para um usuário
+    objective = objective || { model: accessLayer.Objective, require: false };
+    include.push(objective);
+
+    // produtos de uma loja
+    if(storeId && storeId > 0) {
+        include.push({ 
+            model: accessLayer.Store, 
+            require: false,
+            through: { where: { storeId: storeId } }
+        });
+    } else {
+        include.push({ model: accessLayer.Store, require: false });
+    }
+
     return accessLayer.Product.findAndCountAll({
-        include: [ 
-            { model: accessLayer.Brand, require: true }, 
-            { model: accessLayer.Category, require: true }, 
-            { model: accessLayer.Tag, require: false }, 
-            { model: accessLayer.Objective, require: false },
-            { model: accessLayer.ProductImage, as: 'images'},
-            { 
-                model: accessLayer.Store, 
-                require: false,
-                through: { where: { storeId: storeId } }
-            },
-            { 
-                attributes: ['id','status'],
-                model: accessLayer.ProductChange, 
-                require: false,
-                as: 'changes',
-                include: [
-                    { model: accessLayer.Store, as: 'storeRequest', require: true}
-                ]
-            }
-        ],
+        include: include,
         where: formatQuery(query),
         offset: offset,
         limit: limit,
@@ -233,7 +248,7 @@ function registerRequestUpdate(req, res, next) {
     findProductByID(id, cache.stores[0].id).then(function(result) {
         if (result) {
             
-            var original = handleSingleResponse(result.dataValues,cache);
+            var original = handleSingleResponse(result.dataValues,req);
             req.body.changedBasic = changedBasicData(original,req.body);
             req.body.changedStore = changedStoreData(original,req.body);
             var approvaded = isAdmin || !req.body.changedBasic;
@@ -294,8 +309,6 @@ function createProductChange(productChange,storeId,t) {
 
 function updateBasicData(req, res, next) {
     var id = req.params.id;
-    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
-    var cache = global.CacheManager.get(authHeader.token);
     var productUpToDate = {};
 
     if (req.body.changedBasic && req.body.changeStatus == 2) {
@@ -333,17 +346,16 @@ function updateBasicData(req, res, next) {
 
 function updateStoreData(req, res, next) {
     var id = req.params.id;
-    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
-    var cache = global.CacheManager.get(authHeader.token);
+    var storeId = getStoreId(req);
     var productUpToDate = {};
 
     if (req.body.changedStore) {
 
         accessLayer.orm.transaction(function(t) {
-            return accessLayer.ProductsStores.destroy({ where: { storeId: cache.stores[0].id, productId: id }}).then(function() {
+            return accessLayer.ProductsStores.destroy({ where: { storeId: storeId, productId: id }}).then(function() {
                     
                 return accessLayer.ProductsStores.bulkCreate([{
-                    storeId: cache.stores[0].id,
+                    storeId: storeId,
                     productId: id,
                     reference: req.body.reference,
                     stock: req.body.stock || 0,
@@ -381,14 +393,13 @@ function destroy(req, res, next) {
 }
 
 function destroyRelationship(req, res, next) {
-    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
-    var cache = global.CacheManager.get(authHeader.token);
     var id = req.params.id;
+    var storeId = getStoreId(req);
 
     accessLayer.ProductsStores.destroy({ 
         where: { 
             productId: id,
-            storeId: cache.stores[0].id
+            storeId: storeId
         } 
     }).then(function(result) {
         if (result) {
@@ -406,15 +417,14 @@ function destroyRelationship(req, res, next) {
 }
 
 function getAll(req, res, next) {
-    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
-    var cache = global.CacheManager.get(authHeader.token);
     var offset = req.body.start || 0;
     var limit = req.body.length || 10;
     var draw = req.body.draw || 0;
     var order = getOrderBy(req.body);
+    var storeId = getStoreId(req);
     
-    findAndCountAllProduct(req.query, offset, limit, order, cache.stores[0].id).then(function(result) {        
-        var products = handleResponse(result.rows, cache);
+    findAndCountAllProduct(req.query, offset, limit, order, storeId).then(function(result) {        
+        var products = handleResponse(result.rows, req);
 
         var returnedData = {
             draw: draw,
@@ -430,13 +440,12 @@ function getAll(req, res, next) {
 }
 
 function getById(req, res, next) {
-    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
-    var cache = global.CacheManager.get(authHeader.token);
     var id = req.params.id;
+    var storeId = getStoreId(req);
 
-    findProductByID(id, cache.stores[0].id).then(function(result) {
+    findProductByID(id, storeId).then(function(result) {
         if (result) {
-            var product = handleSingleResponse(result.dataValues, cache);
+            var product = handleSingleResponse(result.dataValues, req);
             res.json(product);
         } else {
             var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
@@ -449,12 +458,11 @@ function getById(req, res, next) {
 }
 
 function getCountByStore(req, res, next) {
-    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
-    var cache = global.CacheManager.get(authHeader.token);
+    var storeId = getStoreId(req);
 
     accessLayer.ProductsStores.count({
         where: {
-            storeId: cache.stores[0].id
+            storeId: storeId
         }
     }).then(function(result) {
         res.json(result);
@@ -489,15 +497,14 @@ function findProductByID(id, storeId) {
 }
 
 function getByDataStore(req, res, next) {
-    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
-    var cache = global.CacheManager.get(authHeader.token);
     var code = req.params.code;
     var offset = req.body.start || 0;
     var limit = req.body.length || 10;
     var draw = req.body.draw || 0;
     var order = getOrderBy(req.body);
+    var storeId = getStoreId(req);
 
-    var where = { storeId: cache.stores[0].id };
+    var where = { storeId: storeId };
     if(code && code != "undefined") {
         where.reference = { $like: '%' + code + '%' };
     }
@@ -522,19 +529,79 @@ function getByDataStore(req, res, next) {
             $in: ids
         };
         
-        findAndCountAllProduct(query, offset, limit, order, cache.stores[0].id).then(function(result) {
+        findAndCountAllProduct(query, offset, limit, order, storeId).then(function(result) {
             
             var returnedData = {
                 draw: draw,
                 recordsTotal: result.count,
                 recordsFiltered: result.count,
-                data: handleResponse(result.rows, cache)
+                data: handleResponse(result.rows, req)
             }
 
             res.json(returnedData);
         }, function(error) {
             errorCallback(error, next);
         });
+    }, function(error) {
+        errorCallback(error, next);
+    });
+}
+
+function getByUserObjective(req, res, next) {
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var cache = global.CacheManager.get(authHeader.token);
+
+    var offset = req.body.start || 0;
+    var limit = req.body.length || 10;
+    var draw = req.body.draw || 0;
+    var order = getOrderBy(req.body);
+
+    var query = "(SELECT p.* FROM products as p " +
+                "LEFT OUTER JOIN productsobjectives po ON p.id = po.productId " +
+                "LEFT OUTER JOIN objectivesusers ou ON po.objectiveId = ou.objectiveId " +
+                "LEFT OUTER JOIN objectives o on po.objectiveId = o.id " + 
+                "WHERE ou.userId = " + cache.user.id + " AND o.id <> 5 __AND_CATEGORY__) " + 
+                "UNION " + 
+                "(SELECT p.* FROM products p " + 
+                "LEFT OUTER JOIN productsobjectives po ON p.id = po.productId " + 
+                "LEFT OUTER JOIN objectives o on po.objectiveId = o.id " + 
+                "WHERE o.id = 5 __AND_CATEGORY__)";
+
+    if(req.body.categoryId) {
+        query = query.replace(/__AND_CATEGORY__/g, "AND p.categoryId = " + req.body.categoryId);
+    } else {
+        query = query.replace(/__AND_CATEGORY__/g, "");
+    }
+    
+    accessLayer.orm.query(query, { model: accessLayer.Product }).then(function(productsImages) {
+        
+        var ids = [];
+        var query = {};
+
+        for (var i = 0; i < productsImages.length; i++) {
+            ids.push(productsImages[i].dataValues.id);
+        }
+        
+        // adiciona os ids relacionados à referencia no where junto com os demais filtros
+        query.id = {
+            $in: ids
+        };
+        
+        findAndCountAllProduct(query, offset, limit, order).then(function(result) {
+            var products = handleResponse(result.rows, req);
+
+            var returnedData = {
+                draw: draw,
+                recordsTotal: result.count,
+                recordsFiltered: result.count,
+                data: products
+            }
+
+            res.json(returnedData);
+        }, function(error) {
+            errorCallback(error, next);
+        });
+
     }, function(error) {
         errorCallback(error, next);
     });
@@ -620,6 +687,8 @@ function destroyProductImage(req, res, next) {
     });
 }
 
+//var imghash = require('imghash');
+
 function getPhash(req, res, next) {
 
     framework.media.image.pHash(req.body.image, function(result) {
@@ -634,15 +703,28 @@ function getPhash(req, res, next) {
             next(customError);
         }
     });
+
+    /*var buf = Buffer.from(req.body.image, 'base64');
+
+    imghash.hash(buf).then((hash) => {
+        console.log('** pHash: ' + hash);
+        
+        if (hash) {
+            req.pHash = hash;
+            next();
+        } else {
+            var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
+
+            next(customError);
+        }
+    });*/
 }
 
 function findByImage(req, res, next) {
-
-    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
-    var cache = global.CacheManager.get(authHeader.token);
     var offset = 0;
     var limit = 10;
     var draw = 0;
+    var storeId = getStoreId(req);
     var order = [];
     order.push(['name','asc']);
 
@@ -666,8 +748,8 @@ function findByImage(req, res, next) {
             $in: ids
         };
         
-        findAndCountAllProduct(query, offset, limit, order, cache.stores[0].id).then(function(result) {
-            var products = handleResponse(result.rows, cache);
+        findAndCountAllProduct(query, offset, limit, order, storeId).then(function(result) {
+            var products = handleResponse(result.rows, req);
 
             var returnedData = {
                 draw: draw,
@@ -720,8 +802,6 @@ function changedStoreData(original, updated) {
 }
 
 function getAllApproval(req, res, next) {
-    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
-    var cache = global.CacheManager.get(authHeader.token);
     var offset = req.body.start || 0;
     var limit = req.body.length || 10;
     var draw = req.body.draw || 0;
@@ -902,4 +982,16 @@ function approvalCountByStore(req, res, next) {
     }, function(error) {
         errorCallback(error, next);
     });
+}
+
+function getStoreId(req) {
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var cache = global.CacheManager.get(authHeader.token);
+    var storeId = 0;
+
+    if(cache.stores && cache.stores.length > 0) {
+        storeId = cache.stores[0].id;
+    }
+
+    return storeId;
 }

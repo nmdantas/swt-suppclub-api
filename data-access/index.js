@@ -42,6 +42,7 @@ var CategorySchema = sequelize.import('./models/category');
 var ProductSchema = sequelize.import('./models/product');
 var ProductImageSchema = sequelize.import('./models/productImage');
 var ProductChangeSchema = sequelize.import('./models/productChange');
+var ProductsUsersSchema = sequelize.import('./models/productsUsers');
 
 // Associação Objetivo x Tag
 var ObjectivesTags = sequelize.define('ObjectivesTags', {}, { freezeTableName: true });
@@ -50,6 +51,7 @@ TagSchema.belongsToMany(ObjectiveSchema, { through: ObjectivesTags, foreignKey: 
 
 // Associação Objetivo x Usuário
 ObjectivesUsersSchema.belongsTo(ObjectiveSchema, { foreignKey: 'objectiveId', as: 'objective' });
+ObjectiveSchema.hasMany(ObjectivesUsersSchema, { foreignKey: 'objectiveId', as: 'users' });
 
 // Associação de Hierarquida de categorias
 CategorySchema.hasMany(CategorySchema, { foreignKey: 'categoryId', as: 'categories' });
@@ -101,6 +103,10 @@ StoreSchema.belongsToMany(ProductChangeSchema, { through: ProductsChangesStoresR
 ProductChangeSchema.belongsToMany(StoreSchema, { through: ProductsChangesStoresApproval, foreignKey: 'productChangeId', otherKey: 'storeId', as: 'storeApproval' });
 StoreSchema.belongsToMany(ProductChangeSchema, { through: ProductsChangesStoresApproval, foreignKey: 'storeId', otherKey: 'productChangeId' });
 
+// Associação Produto x Usuário
+ProductsUsersSchema.belongsTo(ProductSchema, { foreignKey: 'productId', as: 'product' });
+ProductSchema.hasMany(ProductsUsersSchema, { foreignKey: 'productId', as: 'users' });
+
 StoreSchema.hasOne(StoreAddressSchema, { as: 'address', foreignKey: 'storeId'});
 StoreSchema.hasOne(StoreParametersSchema, { as: 'parameters', foreignKey: 'storeId'});
 
@@ -129,5 +135,6 @@ module.exports = {
     ProductImage: ProductImageSchema,
     ProductChange: ProductChangeSchema,
     ProductsChangesStoresRequest: ProductsChangesStoresRequest,
-    ProductsChangesStoresApproval: ProductsChangesStoresApproval
+    ProductsChangesStoresApproval: ProductsChangesStoresApproval,
+    ProductsUsers: ProductsUsersSchema
 };
