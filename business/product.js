@@ -556,15 +556,15 @@ function getByUserObjective(req, res, next) {
     var draw = req.body.draw || 0;
     var order = getOrderBy(req.body);
 
-    var query = "(SELECT p.* FROM products as p " +
-                "LEFT OUTER JOIN productsobjectives po ON p.id = po.productId " +
-                "LEFT OUTER JOIN objectivesusers ou ON po.objectiveId = ou.objectiveId " +
-                "LEFT OUTER JOIN objectives o on po.objectiveId = o.id " + 
+    var query = "(SELECT p.* FROM Products as p " +
+                "LEFT OUTER JOIN ProductsObjectives po ON p.id = po.productId " +
+                "LEFT OUTER JOIN ObjectivesUsers ou ON po.objectiveId = ou.objectiveId " +
+                "LEFT OUTER JOIN Objectives o on po.objectiveId = o.id " + 
                 "WHERE ou.userId = " + cache.user.id + " AND o.id <> 5 __AND_CATEGORY__) " + 
                 "UNION " + 
-                "(SELECT p.* FROM products p " + 
-                "LEFT OUTER JOIN productsobjectives po ON p.id = po.productId " + 
-                "LEFT OUTER JOIN objectives o on po.objectiveId = o.id " + 
+                "(SELECT p.* FROM Products p " + 
+                "LEFT OUTER JOIN ProductsObjectives po ON p.id = po.productId " + 
+                "LEFT OUTER JOIN Objectives o on po.objectiveId = o.id " + 
                 "WHERE o.id = 5 __AND_CATEGORY__)";
 
     if(req.body.categoryId) {
