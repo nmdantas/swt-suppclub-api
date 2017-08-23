@@ -16,6 +16,10 @@ module.exports = {
         all: getAll,
         byId: getById,
         byUser: getByUser,
+        byProduct: [
+            getByProduct,
+            getAll
+        ],
         storeShift: [
             isAllowed,
             getById,
@@ -134,19 +138,35 @@ function update(req, res, next) {
 }
 
 function getAll(req, res, next) {
-    accessLayer.Store.findAll({
+
+    var findObj = {
         include: [
             { model: accessLayer.StoreAddress, require: false, as: 'address' },
             { model: accessLayer.StoreParameters, require: false, as: 'parameters' }
-        ]
-    }).then(function(results) {
-        var stores = [];
+        ],
+        attributes: ['name','nickname','phone','email','cnpj','sponsor','sponsorDocument','website','description','status','resume','open'],
+        order: [['name','asc']]
+    };
 
-        for (var i = 0; i < results.length; i++) {
-            stores.push(results[i].dataValues);
-        }
+    if(req.params.latitude && req.params.longitude 
+        && req.params.latitude.length > 0 && req.params.longitude.length > 0) {
+        
+        findObj.attributes.push([accessLayer.orm.literal(' (6371 * acos ( '
+                + 'cos( radians(' + req.params.latitude + ') ) '
+                + '* cos( radians( address.latitude ) ) '
+                + '* cos( radians( address.longitude ) - radians(' + req.params.longitude + ') )' 
+                + '+ sin( radians(' + req.params.latitude + ') )' 
+                + '* sin( radians( address.latitude )))) ' ), 'distance'
+        ]);
+    }
 
-        res.json(stores);
+    if(req.ids && req.ids.length > 0) {
+
+        findObj.where = { id: { $in: req.ids } };
+    }
+    
+    accessLayer.Store.findAll( findObj ).then(function(results) {
+        res.json(results);
     }, function(error) {
         errorCallback(error, next);
     });
@@ -254,4 +274,26 @@ function updateOpen(req, res, next) {
 
 function changeSession(req, res, next) {
     
+}
+
+function getByProduct(req, res, next) {
+
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var id = req.params.id;
+    
+    accessLayer.ProductsStores.findAll({ 
+        attributes: ['storeId'],
+        where: { productId: id }
+    }).then(function(storesProducts) {
+        req.ids = [];
+
+        for (var i = 0; i < storesProducts.length; i++) {
+            req.ids.push(storesProducts[i].dataValues.storeId);
+        }
+
+        next();
+
+    }, function(error) {
+        errorCallback(error, next);
+    });
 }

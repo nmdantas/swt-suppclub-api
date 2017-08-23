@@ -16,6 +16,8 @@ router.get('/stores/:id', business.get.byId);
 router.get('/stores/:id/shift', business.get.storeShift);
 router.put('/stores/:id', business.update.data);
 router.get('/stores/user/:id', business.get.byUser);
+router.get('/stores/product/:id/:latitude?/:longitude?', business.get.byProduct);
+router.get('/stores/coordinates/:latitude/:longitude', business.get.all);
 
 router.post('/stores/open', business.update.open);
 

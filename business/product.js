@@ -16,8 +16,7 @@ module.exports = {
         all: getAll,
         byId: getById,
         byDataStore: getByDataStore,
-        count: getCountByStore,
-        byUserObjective: getByUserObjective
+        count: getCountByStore
     },
     create:[
         preValidation,
@@ -48,6 +47,19 @@ module.exports = {
         update: approveReject,
         get: getApprovalById,
         count: approvalCountByStore
+    },
+    user: {
+        objective: {
+            list: getByUserObjective
+        },
+        desire: {
+            list: getByUserDesire,
+            create: [
+                preValidationUserDesire,
+                createUserDesire
+            ],
+            delete: destroyUserDesire
+        }
     }
 };
 
@@ -66,23 +78,23 @@ function handleSingleResponse(product, req) {
     var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
     var cache = global.CacheManager.get(authHeader.token);
     var isAdmin = (cache.roles.indexOf('Admin') > -1 || cache.roles.indexOf('Lojista_Admin') > -1);
-    var storeIndex = 0;
-    var belongsToStore = 0;
+    var index = -1;
+    var belongsTo = 0;
 
     for (var j = 0; j < product.Stores.length; j++) {
         var match = product.Stores[j].id === cache.stores[0].id;
 
         if (match) {
-            storeIndex = j;
+            index = j;
         }
 
-        belongsToStore |= match;
+        belongsTo |= match;
     }
 
     // Volta a variavel para o tipo boolean, pois quando
     // o operador "|=" é usado o retorno é um inteiro
-    product.belongsToStore = belongsToStore ? true : false;
-    product.storeIndex = storeIndex;
+    product.belongsToStore = belongsTo ? true : false;
+    product.storeIndex = index;
 
     if(!isAdmin && product.changes.length > 0) {
         var changes = [];
@@ -93,6 +105,23 @@ function handleSingleResponse(product, req) {
         }
         product.changes = changes;
     }
+
+    index = -1;
+    belongsTo = 0;
+    for (var i = 0; i < product.users.length; i++) {
+        var match = product.users[i].userId === cache.user.id;
+
+        if (match) {
+            index = i;
+        }
+
+        belongsTo |= match;
+    }
+
+    // Volta a variavel para o tipo boolean, pois quando
+    // o operador "|=" é usado o retorno é um inteiro
+    product.belongsToUser = belongsTo ? true : false;
+    product.userIndex = index;
 
     return product;
 }
@@ -107,6 +136,10 @@ function getOrderBy(body) {
         var columnName = body.columns[index].data;
         
         order.push([columnName, direction]);
+    }
+
+    if (order.length == 0) {
+        order.push(['name','asc']);
     }
 
     return order;
@@ -145,13 +178,15 @@ function preValidation(req, res, next) {
     }
 }
 
-function findAndCountAllProduct(query,offset,limit,order,storeId,objective) {
+function findAndCountAllProduct(query,offset,limit,order,storeId) {
 
     var include = [ 
         { model: accessLayer.Brand, require: true }, 
         { model: accessLayer.Category, require: true }, 
         { model: accessLayer.Tag, require: false },
+        { model: accessLayer.Objective, require: false },
         { model: accessLayer.ProductImage, as: 'images'},
+        { model: accessLayer.ProductsUsers, require: false, as: 'users', attributes: ['userId','comment'] },
         { 
             attributes: ['id','status'],
             model: accessLayer.ProductChange, 
@@ -162,10 +197,6 @@ function findAndCountAllProduct(query,offset,limit,order,storeId,objective) {
             ]
         }
     ];
-
-    // indicados para um usuário
-    objective = objective || { model: accessLayer.Objective, require: false };
-    include.push(objective);
 
     // produtos de uma loja
     if(storeId && storeId > 0) {
@@ -479,6 +510,7 @@ function findProductByID(id, storeId) {
             accessLayer.Tag, 
             accessLayer.Objective,
             { model: accessLayer.ProductImage, as: 'images'},
+            { model: accessLayer.ProductsUsers, require: false, as: 'users', attributes: ['userId','comment'] },
             { 
                 model: accessLayer.Store, 
                 require: false,
@@ -507,10 +539,6 @@ function getByDataStore(req, res, next) {
     var where = { storeId: storeId };
     if(code && code != "undefined") {
         where.reference = { $like: '%' + code + '%' };
-    }
-
-    if (order.length == 0) {
-        order.push(['name','asc']);
     }
 
     accessLayer.ProductsStores.findAll({ 
@@ -597,7 +625,7 @@ function getByUserObjective(req, res, next) {
                 data: products
             }
 
-            res.json(returnedData);
+            res.json(returnedData); 
         }, function(error) {
             errorCallback(error, next);
         });
@@ -984,6 +1012,119 @@ function approvalCountByStore(req, res, next) {
     });
 }
 
+function getByUserDesire(req, res, next) {
+    var offset = req.body.start || 0;
+    var limit = req.body.length || 10;
+    var draw = req.body.draw || 0;
+    var order = getOrderBy(req.body);
+
+    accessLayer.ProductsUsers.findAll({ 
+        attributes: ['productId'],
+        where: { 
+            userId: getUserId(req)
+        }
+    }).then(function(productsUsers) {
+        var ids = [];
+        var query = req.query || {};
+
+        for (var i = 0; i < productsUsers.length; i++) {
+            ids.push(productsUsers[i].dataValues.productId);
+        }
+        
+        // adiciona os ids relacionados à referencia no where junto com os demais filtros
+        query.id = {
+            $in: ids
+        };
+        
+        findAndCountAllProduct(query, offset, limit, order).then(function(result) {
+            
+            var returnedData = {
+                draw: draw,
+                recordsTotal: result.count,
+                recordsFiltered: result.count,
+                data: handleResponse(result.rows, req)
+            }
+
+            res.json(returnedData);
+        }, function(error) {
+            errorCallback(error, next);
+        });
+    }, function(error) {
+        errorCallback(error, next);
+    });
+}
+
+function preValidationUserDesire(req, res, next) {
+    var constraints = framework.common.validation.requiredFor('productId');
+    var validationErrors = framework.common.validation.validate(req.body, constraints);
+
+    var errorCallback = function(error) {
+        var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
+
+        next(customError);
+    };
+
+    if (!validationErrors) {
+
+        accessLayer.ProductsUsers.findAll({ 
+            where: {
+                userId: getUserId(req), 
+                productId: req.body.productId
+            }
+        }).then(function(result) {
+            if (result) {
+                if (result.length > 0) {
+                    errorCallback({ message: 'Produto já cadastrado!'});
+                } else {
+                    next();
+                }
+            } else {
+                errorCallback({ message: 'Registro não encontrato.'});
+            }
+        }, errorCallback);
+    } else {
+        errorCallback(validationErrors);
+    }
+}
+
+function createUserDesire(req, res, next) {
+    
+    accessLayer.ProductsUsers.create({
+        userId: getUserId(req),
+        productId: req.body.productId,
+        comment: req.body.comment || ''
+    }).then(function(result) {
+        res.json(result);
+    }, function(error) {
+        var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
+
+        next(customError);
+    });
+}
+
+function destroyUserDesire(req, res, next) {
+    var id = req.params.id;
+
+    accessLayer.ProductsUsers.destroy({ 
+        where: { 
+            userId: getUserId(req),
+            productId: id
+        }
+    }).then(function(result) {
+        if (result) {
+            res.end();
+        } else {
+            var customError = new framework.models.SwtError({ httpCode: 404, message: 'Registro não encontrado' });
+
+            next(customError);
+        }
+    }, function(error) {
+        var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
+
+        next(customError);
+    });
+}
+
 function getStoreId(req) {
     var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
     var cache = global.CacheManager.get(authHeader.token);
@@ -994,4 +1135,11 @@ function getStoreId(req) {
     }
 
     return storeId;
+}
+
+function getUserId(req) {
+    var authHeader = framework.common.parseAuthHeader(req.headers.authorization);
+    var cache = global.CacheManager.get(authHeader.token);
+    
+    return cache.user.id;
 }

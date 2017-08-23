@@ -19,7 +19,6 @@ router.put('/products/:id', business.update);
 router.delete('/products/:id', framework.security.authorize(['Admin','Lojista_Admin']), business.delete);
 
 router.post('/products/pagination', business.get.all);
-router.post('/products/userobjective', business.get.byUserObjective);
 router.get('/products/datastore/:code', business.get.byDataStore);
 router.delete('/products/:id/relationship', business.deleteRelationship);
 
@@ -31,5 +30,11 @@ router.post('/products/approval', framework.security.authorize(['Admin','Lojista
 router.get('/products/approval/count', business.approval.count);
 router.put('/products/approval/:id', framework.security.authorize(['Admin','Lojista_Admin']), business.approval.update);
 router.get('/products/approval/:id', business.approval.get);
+
+router.post('/products/user/objective', business.user.objective.list);
+
+router.post('/products/user/desire', business.user.desire.list);
+router.post('/products/user/desire/add', business.user.desire.create);
+router.delete('/products/user/desire/:id', business.user.desire.delete);
 
 module.exports = router;
