@@ -11,6 +11,7 @@ module.exports = function(sequelize, DataType) {
     return sequelize.define('ProductsUsers', {
         userId: { type: DataType.INTEGER, allowNull: false },
         comment: { type: DataType.STRING, allowNull: true },
+        rate: { type: DataType.INTEGER, allowNull: true }
     }, {
         underscored: false,
         freezeTableName: true,

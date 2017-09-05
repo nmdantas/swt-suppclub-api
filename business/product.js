@@ -59,7 +59,15 @@ module.exports = {
                 createUserDesire
             ],
             delete: destroyUserDesire
-        }
+        },
+        rate: [
+            preValidationUserDesire,
+            addRate
+        ],
+        comment: [
+            preValidationUserDesire,
+            addComment
+        ]
     }
 };
 
@@ -1066,18 +1074,17 @@ function preValidationUserDesire(req, res, next) {
 
     if (!validationErrors) {
 
+        req.body.userId = getUserId(req);
+
         accessLayer.ProductsUsers.findAll({ 
             where: {
-                userId: getUserId(req), 
+                userId: req.body.userId,
                 productId: req.body.productId
             }
         }).then(function(result) {
             if (result) {
-                if (result.length > 0) {
-                    errorCallback({ message: 'Produto já cadastrado!'});
-                } else {
-                    next();
-                }
+                req.result = result;
+                next();
             } else {
                 errorCallback({ message: 'Registro não encontrato.'});
             }
@@ -1089,26 +1096,29 @@ function preValidationUserDesire(req, res, next) {
 
 function createUserDesire(req, res, next) {
     
-    accessLayer.ProductsUsers.create({
-        userId: getUserId(req),
-        productId: req.body.productId,
-        comment: req.body.comment || ''
-    }).then(function(result) {
-        res.json(result);
-    }, function(error) {
+    var errorCallback = function(error) {
         var customError = new framework.models.SwtError({ httpCode: 400, message: error.message });
 
         next(customError);
-    });
+    };
+
+    if (req.result && req.result.length > 0) {
+        errorCallback({ message: 'Produto já cadastrado!'});
+    } else {
+        
+        accessLayer.ProductsUsers.create( req.body ).then(function(result) {
+            res.json(result);
+        }, errorCallback );
+    }
 }
 
 function destroyUserDesire(req, res, next) {
-    var id = req.params.id;
+    var productId = req.params.id;
 
     accessLayer.ProductsUsers.destroy({ 
         where: { 
             userId: getUserId(req),
-            productId: id
+            productId: productId
         }
     }).then(function(result) {
         if (result) {
@@ -1123,6 +1133,50 @@ function destroyUserDesire(req, res, next) {
 
         next(customError);
     });
+}
+
+function addRate(req, res, next) {
+    
+    if (req.result && req.result.length > 0) {
+        
+        var productUser = req.result[0];
+        productUser.rate = req.body.rate;
+
+        accessLayer.ProductsUsers.update(productUser, { 
+            where: { 
+                userId: req.body.userId,
+                productId: req.body.productId,
+                deletedAt: null 
+            }
+        }).then(function(result) {
+            res.json(result);
+        }, errorCallback );
+
+    } else {
+        errorCallback({ message: 'Produto não cadastrado!'});
+    }
+}
+
+function addComment(req, res, next) {
+    
+    if (req.result && req.result.length > 0) {
+        
+        var productUser = req.result[0];
+        productUser.comment = req.body.comment;
+
+        accessLayer.ProductsUsers.update(productUser, { 
+            where: { 
+                userId: req.body.userId,
+                productId: req.body.productId,
+                deletedAt: null 
+            }
+        }).then(function(result) {
+            res.json(result);
+        }, errorCallback );
+
+    } else {
+        errorCallback({ message: 'Produto não cadastrado!'});
+    }
 }
 
 function getStoreId(req) {

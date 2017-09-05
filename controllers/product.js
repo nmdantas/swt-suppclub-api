@@ -35,6 +35,8 @@ router.post('/products/user/objective', business.user.objective.list);
 
 router.post('/products/user/desire', business.user.desire.list);
 router.post('/products/user/desire/add', business.user.desire.create);
+router.post('/products/user/rate', business.user.rate);
+router.post('/products/user/comment', business.user.comment);
 router.delete('/products/user/desire/:id', business.user.desire.delete);
 
 module.exports = router;
