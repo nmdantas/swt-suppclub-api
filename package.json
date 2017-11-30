@@ -1,9 +1,10 @@
 {
   "name": "swt-suppclub-api",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "The newest SWT application",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "test": "mocha -R spec index.js",
     "test-ci": "istanbul cover node_modules/mocha/bin/_mocha -R spec test/index.js"
   },
